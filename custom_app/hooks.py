@@ -14,6 +14,9 @@ doc_events = {
         "before_insert": "custom_app.api.email.set_company_email_account"
     }
 }
+doctype_js = {
+    "Employee": "public/js/academic_level_selection.js"
+}
 
 # Apps
 # ------------------
