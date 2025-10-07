@@ -9,6 +9,12 @@ override_doctype_class = {
     "Attendance": "custom_app.overrides.attendance.CustomAttendance"
 }
 
+doc_events = {
+    "Communication": {
+        "before_insert": "custom_app.api.email.set_company_email_account"
+    }
+}
+
 # Apps
 # ------------------
 
