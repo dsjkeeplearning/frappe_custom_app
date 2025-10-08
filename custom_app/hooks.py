@@ -18,6 +18,12 @@ doctype_js = {
     "Employee": "public/js/academic_level_selection.js"
 }
 
+scheduler_events = {
+    "daily": [
+        "custom_app.tasks.end_probation.allocate_earned_leaves_on_probation_end"
+    ]
+}
+
 # Apps
 # ------------------
 
