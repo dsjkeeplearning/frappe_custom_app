@@ -2,34 +2,33 @@ frappe.ui.form.on('Employee', {
     refresh(frm) {
         const is_teaching = frm.doc.custom_type === 'Teaching';
 
-        // Show/hide fields
-        frm.toggle_display(
-            ['custom_academic_level', 'custom_category'],
-            is_teaching
-        );
+        // Fields to toggle for Teaching type
+        const teaching_fields = [
+            'custom_academic_level',
+            'custom_category',
+            'custom_academic_level_ugc_subscale',
+            'custom_ag_levelugc_subscale'
+        ];
 
-        // Make mandatory only if Teaching
-        frm.set_df_property('custom_academic_level', 'reqd', is_teaching);
-        frm.set_df_property('custom_category', 'reqd', is_teaching);
+        // Show/hide fields
+        frm.toggle_display(teaching_fields, is_teaching);
     },
 
     custom_type(frm) {
         const is_teaching = frm.doc.custom_type === 'Teaching';
 
+        const teaching_fields = [
+            'custom_academic_level',
+            'custom_category',
+            'custom_academic_level_ugc_subscale',
+            'custom_ag_levelugc_subscale'
+        ];
+
         // Show/hide fields
-        frm.toggle_display(
-            ['custom_academic_level', 'custom_category'],
-            is_teaching
-        );
-
-        // Make mandatory only if Teaching
-        frm.set_df_property('custom_academic_level', 'reqd', is_teaching);
-        frm.set_df_property('custom_category', 'reqd', is_teaching);
-
+        frm.toggle_display(teaching_fields, is_teaching);
         // Clear values if not teaching
         if (!is_teaching) {
-            frm.set_value('custom_academic_level', '');
-            frm.set_value('custom_category', '');
+            teaching_fields.forEach(f => frm.set_value(f, ''));
         }
     },
 
