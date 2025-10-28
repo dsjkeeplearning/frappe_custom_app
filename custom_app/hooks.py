@@ -12,6 +12,9 @@ override_doctype_class = {
 doc_events = {
     "Communication": {
         "before_insert": "custom_app.api.email.set_company_email_account"
+    },
+    "Employee Checkin": {
+        "before_insert": "custom_app.api.employee_checkin.before_insert_checkin"
     }
 }
 doctype_js = {
