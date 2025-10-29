@@ -35,6 +35,11 @@ scheduler_events = {
     }
 }
 
+fixtures = [
+    {"doctype": "Workspace", "filters": [["name", "in", ["Recruitment"]]]}
+]
+
+
 # Apps
 # ------------------
 
