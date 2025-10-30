@@ -15,6 +15,9 @@ doc_events = {
     },
     "Employee Checkin": {
         "before_insert": "custom_app.api.employee_checkin.before_insert_checkin"
+    },
+    "User": {
+        "on_update": "custom_app.api.user_permission.manage_user_permissions"
     }
 }
 doctype_js = {
