@@ -382,5 +382,79 @@
    }
   ],
   "title": "Recruitment"
+ },
+ {
+  "charts": [],
+  "content": "[{\"id\":\"5vR5oVqWdU\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Config Email</span>\",\"col\":12}},{\"id\":\"dVg47XU6rr\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Default Company\",\"col\":3}},{\"id\":\"q3iJjz_QuN\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Default Email Account\",\"col\":3}}]",
+  "custom_blocks": [],
+  "docstatus": 0,
+  "doctype": "Workspace",
+  "for_user": "",
+  "hide_custom": 0,
+  "icon": "mail",
+  "indicator_color": "blue",
+  "is_hidden": 0,
+  "label": "Config Email",
+  "links": [],
+  "modified": "2025-10-31 11:04:03.009068",
+  "module": "HR",
+  "name": "Config Email",
+  "number_cards": [],
+  "parent_page": "",
+  "public": 1,
+  "quick_lists": [],
+  "restrict_to_domain": null,
+  "roles": [
+   {
+    "parent": "Config Email",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "HR System Manager"
+   },
+   {
+    "parent": "Config Email",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "HR Manager"
+   }
+  ],
+  "sequence_id": 39.0,
+  "shortcuts": [
+   {
+    "color": "Grey",
+    "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "Default Company",
+    "link_to": "Global Defaults",
+    "parent": "Config Email",
+    "parentfield": "shortcuts",
+    "parenttype": "Workspace",
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "DocType",
+    "url": null
+   },
+   {
+    "color": "Grey",
+    "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "Default Email Account",
+    "link_to": "Email Account",
+    "parent": "Config Email",
+    "parentfield": "shortcuts",
+    "parenttype": "Workspace",
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": "[]",
+    "type": "DocType",
+    "url": null
+   }
+  ],
+  "title": "Config Email"
  }
 ]
