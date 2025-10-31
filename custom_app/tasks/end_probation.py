@@ -28,7 +28,7 @@ def allocate_earned_leaves_on_probation_end():
         total_days = (fy_end - probation_end).days + 1
         earned_per_year = 18
         prorata_leaves = round((total_days / 365) * earned_per_year, 2)
-        leave_type_name = "Earned Leave"
+        leave_type_name = "Earned Leave CDE/VU"
         if not frappe.db.exists("Leave Type", leave_type_name):
             frappe.throw(f"Leave Type '{leave_type_name}' not found. Please create it first.")
         
