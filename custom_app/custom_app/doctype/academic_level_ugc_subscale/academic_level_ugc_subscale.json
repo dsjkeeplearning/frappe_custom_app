@@ -1,25 +1,29 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "field:academic_level_ugc_subscale",
  "creation": "2025-10-13 13:53:53.562667",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "section_break_my43"
+  "academic_level_ugc_subscale"
  ],
  "fields": [
   {
-   "fieldname": "section_break_my43",
-   "fieldtype": "Section Break"
+   "fieldname": "academic_level_ugc_subscale",
+   "fieldtype": "Data",
+   "label": "Academic Level UGC Subscale",
+   "unique": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-13 13:53:53.562667",
+ "modified": "2025-10-31 15:45:18.968444",
  "modified_by": "Administrator",
  "module": "Custom App",
  "name": "Academic Level UGC Subscale",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
