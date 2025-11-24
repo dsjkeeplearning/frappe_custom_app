@@ -42,12 +42,61 @@ def map_leave_code(leave_type):
 
 
 # ---------------------------------------
+# HOLIDAY CHECK FUNCTION
+# ---------------------------------------
+def get_holiday_code(employee, date):
+    """Return WO (week off) or PH (public holiday) based on employee holiday list."""
+    
+    holiday_list = frappe.db.get_value("Employee", employee, "holiday_list")
+    if not holiday_list:
+        return None
+
+    holiday = frappe.get_all(
+        "Holiday",
+        filters={"parent": holiday_list, "holiday_date": date},
+        fields=["description"],
+        limit=1
+    )
+
+    if not holiday:
+        return None
+
+    desc = (holiday[0].description or "").lower()
+
+    if "saturday" in desc or "sunday" in desc:
+        return "WO"
+
+    return "PH"
+
+
+# ---------------------------------------
+# FETCH ATTENDANCE REQUEST FROM ATTENDANCE
+# ---------------------------------------
+def get_attendance_request(attendance_doc):
+    """Returns request_type if linked attendance_request exists."""
+    request_id = attendance_doc.get("attendance_request")
+    if not request_id:
+        return None
+
+    req = frappe.get_value(
+        "Attendance Request",
+        request_id,
+        ["reason"],
+        as_dict=True
+    )
+
+    if not req:
+        return None
+
+    return (req.reason or "").lower()
+
+
+# ---------------------------------------
 # MAIN FUNCTION
 # ---------------------------------------
 @frappe.whitelist()
 def generate_excel(doc):
 
-    # Convert JSON from client → python dict
     if isinstance(doc, str):
         doc = json.loads(doc)
 
@@ -56,14 +105,12 @@ def generate_excel(doc):
     if not (doc.company and doc.from_date and doc.to_date):
         frappe.throw(_("Please select Company, From Date and To Date"))
 
-    # Fetch employees of the company
     employees = frappe.get_all(
         "Employee",
         filters={"company": doc.company},
         fields=["name", "employee", "employee_name", "employee_number"]
     )
 
-    # Date range list
     start = getdate(doc.from_date)
     end = getdate(doc.to_date)
 
@@ -73,7 +120,6 @@ def generate_excel(doc):
         dates.append(d)
         d = add_days(d, 1)
 
-    # Create workbook
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Attendance Report"
@@ -84,10 +130,9 @@ def generate_excel(doc):
     ws.cell(row=1, column=3, value="FromDate").font = Font(bold=True)
     ws.cell(row=1, column=4, value="ToDate").font = Font(bold=True)
 
-    formatted_from_date = getdate(doc.from_date).strftime("%d/%m/%Y")
-    formatted_to_date = getdate(doc.to_date).strftime("%d/%m/%Y")
+    formatted_from_date = start.strftime("%d/%m/%Y")
+    formatted_to_date = end.strftime("%d/%m/%Y")
 
-    # DATE COLUMNS
     for i, date in enumerate(dates):
         col = i + 5
         ws.cell(row=1, column=col, value=date.strftime("%d/%m/%Y"))
@@ -106,19 +151,19 @@ def generate_excel(doc):
         for i, date in enumerate(dates):
             col = i + 5
 
-            # Fetch submitted attendances only
             attendance = frappe.get_value(
                 "Attendance",
                 {
                     "employee": emp.name,
                     "attendance_date": date,
-                    "docstatus": 1      # <-- Only Submitted
+                    "docstatus": 1
                 },
-                ["status", "leave_type", "half_day_status"],
+                ["name", "status", "leave_type", "half_day_status", "attendance_request"],
                 as_dict=True
             )
 
             value = ""
+            holiday_code = get_holiday_code(emp.name, date)
 
             if attendance:
                 status = (attendance.status or "").lower()
@@ -126,51 +171,91 @@ def generate_excel(doc):
                 half_day_status = (attendance.half_day_status or "").lower()
                 leave_code = map_leave_code(leave_type)
 
-                # ----------------------------
-                # HALF DAY LOGIC
-                # ----------------------------
+                # CHECK ATTENDANCE REQUEST
+                req_type = get_attendance_request(attendance)
+
+                # ---------------------
+                # HALF DAY
+                # ---------------------
                 if status == "half day":
 
-                    # Half Day + Present → "HD, HD<leavecode>"
                     if half_day_status == "present":
                         if leave_code:
-                            value = f"HD, HD{leave_code}"   # EX: HD, HDSL
+                            base = f"HD{leave_code}"
                         else:
-                            value = "HD"
+                            base = "HD"
 
-                    # Half Day + Absent → "HD<leavecode>"
                     elif half_day_status == "absent":
                         if leave_code:
-                            value = f"HD{leave_code}"       # EX: HDSL
+                            base = f"HD{leave_code}"
                         else:
-                            value = "HD"
+                            base = "HD"
 
-                # ----------------------------
-                # FULL DAY LOGIC
-                # ----------------------------
+                    # Apply (OD)
+                    if req_type == "on duty":
+                        base = f"{base}(OD)"
+
+                    if holiday_code:
+                        value = f"{base},{holiday_code}"
+                    else:
+                        value = base
+
+                # ---------------------
+                # PRESENT
+                # ---------------------
                 elif status == "present":
-                    value = "P"
+                    if req_type == "on duty":
+                        base = "P(OD)"
+                    else:
+                        base = "P"
 
+                    if holiday_code:
+                        value = f"{base},{holiday_code}"
+                    else:
+                        value = base
+
+                # ---------------------
+                # ABSENT
+                # ---------------------
                 elif status == "absent":
-                    value = "A"
+                    base = "A"
+                    if holiday_code:
+                        value = f"A,{holiday_code}"
+                    else:
+                        value = base
 
-                elif status == "work from home":
-                    value = "WFH"
-
+                # ---------------------
+                # ON LEAVE
+                # ---------------------
                 elif status == "on leave":
-                    value = leave_code or "L"
+                    base = leave_code or "L"
+                    if holiday_code:
+                        value = f"{base},{holiday_code}"
+                    else:
+                        value = base
+
+                # ---------------------
+                # WORK FROM HOME
+                # ---------------------
+                elif status == "work from home":
+                    base = "WFH"
+                    if holiday_code:
+                        value = f"WFH,{holiday_code}"
+                    else:
+                        value = base
 
             else:
-                value = ""
+                if holiday_code:
+                    value = holiday_code
+                else:
+                    value = ""
 
             ws.cell(row=row, column=col, value=value)
 
         row += 1
 
-    # SAVE FILE
     filename = f"Attendance-{doc.company}-{doc.from_date}-to-{doc.to_date}.xlsx"
     filepath = frappe.utils.get_site_path("public", "files", filename)
-
     wb.save(filepath)
 
     return f"/files/{filename}"
