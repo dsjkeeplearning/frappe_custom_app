@@ -184,25 +184,16 @@ def generate_excel(doc):
 
                     if half_day_status == "present":
                         if leave_code:
-                            base = f"HD{leave_code}"
+                            value = f"HD, HD{leave_code}"   # EX: HD, HDSL
                         else:
                             base = "HD"
 
                     elif half_day_status == "absent":
                         if leave_code:
-                            base = f"HD{leave_code}"
+                            value = f"HD{leave_code}"       # EX: HDSL
                         else:
-                            base = "HD"
-
-                    # Apply (OD)
-                    if req_type == "on duty":
-                        base = f"{base}(OD)"
-
-                    if holiday_code:
-                        value = f"{base},{holiday_code}"
-                    else:
-                        value = base
-
+                            value = "HD"
+                            
                 # ---------------------
                 # PRESENT
                 # ---------------------
