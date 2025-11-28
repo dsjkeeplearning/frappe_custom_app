@@ -35,6 +35,8 @@ def map_leave_code(leave_type):
         return "PTRL"
     elif leave_type.startswith("mat"):
         return "MTRL"
+    elif leave_type.startswith("marriage"):
+        return "MRGL"
     elif leave_type.startswith("leave without pay") or leave_type.startswith("lop"):
         return "LOP"
     else:
@@ -108,7 +110,8 @@ def generate_excel(doc):
     employees = frappe.get_all(
         "Employee",
         filters={"company": doc.company},
-        fields=["name", "employee", "employee_name", "employee_number"]
+        fields=["name", "employee", "employee_name"],
+        order_by="name asc"
     )
 
     start = getdate(doc.from_date)
@@ -143,7 +146,7 @@ def generate_excel(doc):
     row = 2
     for emp in employees:
 
-        ws.cell(row=row, column=1, value=emp.employee_number or emp.name)
+        ws.cell(row=row, column=1, value=emp.name)
         ws.cell(row=row, column=2, value=emp.employee_name)
         ws.cell(row=row, column=3, value=formatted_from_date)
         ws.cell(row=row, column=4, value=formatted_to_date)
