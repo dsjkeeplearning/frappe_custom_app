@@ -22,6 +22,15 @@ doc_events = {
     },
     "User": {
         "on_update": "custom_app.api.user_permission.manage_user_permissions"
+    },
+    "Material Request": {
+        "before_save": "custom_app.api.material_request.update_item_cost_center"
+    },
+    "Supplier Quotation": {
+        "before_save": "custom_app.api.supplier_quotation.update_item_cost_center"
+    },
+    "Purchase Order": {
+        "before_save": "custom_app.api.purchase_order.validate_po_items"
     }
 }
 doctype_js = {
