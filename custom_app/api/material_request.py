@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 
 def update_item_cost_center(doc, method):
     """
@@ -7,6 +8,6 @@ def update_item_cost_center(doc, method):
     """
     if not doc.custom_cost_center:
         return
-
+    
     for item in doc.items:
         item.cost_center = doc.custom_cost_center

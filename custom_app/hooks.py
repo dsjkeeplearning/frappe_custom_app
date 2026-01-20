@@ -12,6 +12,15 @@ override_doctype_class = {
     "Shift Request": "custom_app.overrides.shift_request.CustomShiftRequest",
 }
 
+override_whitelisted_methods = {
+    "erpnext.stock.doctype.material_request.material_request.make_supplier_quotation":
+        "custom_app.overrides.material_request.make_supplier_quotation",
+    "erpnext.stock.doctype.material_request.material_request.make_request_for_quotation":
+        "custom_app.overrides.material_request.make_request_for_quotation",
+    "erpnext.stock.doctype.material_request.material_request.make_purchase_order":
+        "custom_app.overrides.material_request.make_purchase_order",
+}
+
 doc_events = {
     "Communication": {
         "before_insert": "custom_app.api.email.set_company_email_account"
@@ -30,10 +39,16 @@ doc_events = {
     },
     "Purchase Order": {
         "before_save": "custom_app.api.purchase_order.validate_po_items"
-    }
+    },
 }
+
+permission_query_conditions = {
+    "Material Request": "custom_app.permissions.material_request.material_request_permission_query"
+}
+
 doctype_js = {
-    "Employee": "public/js/academic_level_selection.js", 
+    "Employee": "public/js/academic_level_selection.js",
+    "Material Request": "public/js/material_request.js"
 }
 
 scheduler_events = {
@@ -54,6 +69,23 @@ fixtures = [
     {
         "doctype": "Workspace", 
         "filters": [["name", "in", ["Recruitment", "Config Email"]]]
+    },
+    {
+        "doctype": "Workflow"
+    },
+    {
+        "doctype": "Workflow State"
+    },
+    {
+        "doctype": "Workflow Action Master"
+    },
+    {
+        "doctype": "Role",
+        "filters": [["name", "in", ["Procurement User", "Finance User", "Procurement Approver"]]]
+    },
+    {
+        "doctype": "DocPerm",
+        "filters": [["role", "in", ["Procurement User", "Finance User", "Procurement Approver"]]]
     }
 ]
 
