@@ -12,15 +12,6 @@
   "docstatus": 0,
   "doctype": "Workflow State",
   "icon": "",
-  "modified": "2026-01-19 15:45:53.945625",
-  "name": "Draft",
-  "style": "",
-  "workflow_state_name": "Draft"
- },
- {
-  "docstatus": 0,
-  "doctype": "Workflow State",
-  "icon": "",
   "modified": "2026-01-19 17:07:18.404502",
   "name": "Cancelled",
   "style": "",
@@ -43,5 +34,14 @@
   "name": "Rejected",
   "style": "Danger",
   "workflow_state_name": "Rejected"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2026-01-19 15:45:53.945625",
+  "name": "Draft",
+  "style": "",
+  "workflow_state_name": "Draft"
  }
 ]

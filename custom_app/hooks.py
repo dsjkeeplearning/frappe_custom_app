@@ -19,6 +19,8 @@ override_whitelisted_methods = {
         "custom_app.overrides.material_request.make_request_for_quotation",
     "erpnext.stock.doctype.material_request.material_request.make_purchase_order":
         "custom_app.overrides.material_request.make_purchase_order",
+	"erpnext.buying.doctype.request_for_quotation.request_for_quotation.make_supplier_quotation_from_rfq":
+	    "custom_app.overrides.rfq.make_supplier_quotation_from_rfq"
 }
 
 doc_events = {
@@ -40,15 +42,20 @@ doc_events = {
     "Purchase Order": {
         "before_save": "custom_app.api.purchase_order.validate_po_items"
     },
+    "Expense Claim": {
+        "before_save": "custom_app.api.expense_claim.update_item_cost_center"
+    },
 }
 
 permission_query_conditions = {
-    "Material Request": "custom_app.permissions.material_request.material_request_permission_query"
+    "Material Request": "custom_app.permissions.material_request.material_request_permission_query",
+    "Expense Claim": "custom_app.permissions.expense_claim.expense_claim_permission_query"
 }
 
 doctype_js = {
     "Employee": "public/js/academic_level_selection.js",
-    "Material Request": "public/js/material_request.js"
+    "Material Request": "public/js/material_request.js",
+    "Expense Claim": "public/js/expense_claim.js",
 }
 
 scheduler_events = {
@@ -81,11 +88,56 @@ fixtures = [
     },
     {
         "doctype": "Role",
-        "filters": [["name", "in", ["Procurement User", "Finance User", "Procurement Approver"]]]
+        "filters": [
+            [
+                "name", 
+                "in", 
+                [
+                    "Procurement User", 
+                    "Finance User", 
+                    "Procurement Approver",
+                    "Finance Approver",
+                    "AP User",
+                    "AP Manager"
+                ]
+            ]
+        ]
     },
     {
         "doctype": "DocPerm",
-        "filters": [["role", "in", ["Procurement User", "Finance User", "Procurement Approver"]]]
+        "filters": [
+            [
+                "role", 
+                "in", 
+                [
+                    "Procurement User", 
+                    "Finance User", 
+                    "Procurement Approver", 
+                    "Finance Approver",
+                    "AP User",
+                    "AP Manager",
+                    "Employee"
+                ]
+            ]
+        ]
+    },
+    {
+        "doctype": "Custom DocPerm",
+        "filters": [
+            [
+                "role", 
+                "in", 
+                [
+                    "Procurement User",
+                    "Finance User",
+                    "Procurement Approver",
+                    "Finance Approver",
+                    "AP User",
+                    "AP Manager",
+                    "Employee"
+                ]
+            ]
+        ]
     }
 ]
 

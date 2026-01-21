@@ -1,6 +1,6 @@
 import frappe
 
-def material_request_permission_query(user):
+def expense_claim_permission_query(user):
     roles = frappe.get_roles(user)
 
     # System Manager → everything
@@ -9,16 +9,22 @@ def material_request_permission_query(user):
 
     conditions = []
 
-    # Procurement User → all Approved
-    if "Procurement User" in roles:
+    # AP User → all except draft
+    if "AP User" in roles:
         conditions.append(
-            "`tabMaterial Request`.`workflow_state` = 'Approved'"
+            "`tabExpense Claim`.`status` != 'Draft'"
+        )
+
+    # AP Manager → all except draft
+    if "AP Manager" in roles:
+        conditions.append(
+            "`tabExpense Claim`.`status` != 'Draft'"
         )
 
     # Expense Approver → only assigned to him (User ID stored)
     if "Expense Approver" in roles:
         conditions.append(
-            "`tabMaterial Request`.`custom_request_approver` = {}".format(
+            "`tabExpense Claim`.`expense_approver` = {}".format(
                 frappe.db.escape(user)
             )
         )
@@ -33,7 +39,7 @@ def material_request_permission_query(user):
 
         if employee:
             conditions.append(
-                "`tabMaterial Request`.`custom_employee` = {}".format(
+                "`tabExpense Claim`.`employee` = {}".format(
                     frappe.db.escape(employee)
                 )
             )
