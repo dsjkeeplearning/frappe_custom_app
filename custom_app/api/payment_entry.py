@@ -20,3 +20,10 @@ def validate(doc, method):
             frappe.throw(
                 _("Unallocated Amount must be zero for Supplier Payment Entry with References")
             )
+def before_save(doc, method):
+    doc.custom_creator = frappe.session.user
+    doc.custom_creation_date_time = frappe.utils.now_datetime()
+
+def before_submit(doc, method):
+    doc.custom_approver = frappe.session.user
+    doc.custom_approval_date_time = frappe.utils.now_datetime()

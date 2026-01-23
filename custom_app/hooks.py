@@ -46,7 +46,9 @@ doc_events = {
         "before_save": "custom_app.api.expense_claim.update_item_cost_center"
     },
     "Payment Entry": {
-        "validate": "custom_app.api.payment_entry.validate"
+        "validate": "custom_app.api.payment_entry.validate",
+        "before_save": "custom_app.api.payment_entry.before_save",
+        "before_submit": "custom_app.api.payment_entry.before_submit"
     }
 }
 
@@ -122,6 +124,7 @@ fixtures = [
                     "AP Manager",
                     "Employee",
                     "Auditor",
+                    "Expense Approver",
                 ]
             ]
         ]
@@ -141,6 +144,7 @@ fixtures = [
                     "AP Manager",
                     "Employee",
                     "Auditor",
+                    "Expense Approver",
                 ]
             ]
         ]
