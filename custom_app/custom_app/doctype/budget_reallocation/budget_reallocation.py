@@ -1,6 +1,10 @@
+from datetime import timedelta
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import getdate, add_months, add_days
+import calendar
+from datetime import date
 
 
 class BudgetReallocation(Document):
@@ -10,7 +14,108 @@ class BudgetReallocation(Document):
         self.calculate_current_budget()
         self.calculate_differences()
         self.validate_budget_limit()
+        self.validate_material_requests()
     
+    def validate_material_requests(self):
+        if self.new_budget < self.current_budget:
+        
+            # get start and end date of the month
+            start_date, end_date = self.get_month_start_end(self.fiscal_year, self.month)
+            total_budget_till_month = self.get_total_budget_till_month()
+            mrs = frappe.get_all('Material Request', filters={
+                'custom_cost_center': self.cost_center,
+                'company': self.company,
+                'transaction_date': ['between', [start_date, end_date]],
+                'docstatus': 1,
+            }, fields=['name'])
+
+            if not mrs:
+                return
+
+            total_mr_amount = 0
+            for mr in mrs:
+                mris = frappe.get_all('Material Request Item', filters={
+                    'parent': mr.name,
+                    'expense_account': self.account,
+                    'cost_center': self.cost_center,
+                }, fields=['amount'])
+                for mri in mris:
+                    total_mr_amount += mri.amount
+
+            if total_mr_amount > total_budget_till_month + self.new_budget - self.current_budget:
+                frappe.throw(_(
+                    'Cannot reduce budget to {0:,.2f} as there are Material Requests '
+                    'totaling {1:,.2f} for Account "{2}" in Cost Center "{3}" '
+                    'till {4} {5}. Please adjust the budget accordingly.'
+                ).format(
+                    self.new_budget,
+                    total_mr_amount,
+                    self.account,
+                    self.cost_center,
+                    self.month,
+                    self.fiscal_year
+                ))
+
+    def get_total_budget_till_month(self):
+        # fetch budget till the selected month
+        budgets = frappe.get_all('Budget', filters={
+            'cost_center': self.cost_center,
+            'company': self.company,
+            'fiscal_year': self.fiscal_year,
+            'docstatus': 1
+        }, fields=['name', 'monthly_distribution'])
+        if not budgets:
+            return 0
+        for budget in budgets:
+            amount = frappe.db.get_value('Budget Account', filters={
+                'parent': budget.name,
+                'account': self.account
+            }, fieldname=['budget_amount'])
+            if amount:
+                total_budget = 0
+                monthly_distribution = frappe.get_doc('Monthly Distribution', budget.monthly_distribution)
+                for row in monthly_distribution.percentages:
+                    # from april to selected month
+                    month_index = list(calendar.month_name).index(row.month)
+                    selected_month_index = list(calendar.month_name).index(self.month)
+                    if selected_month_index < 4:
+                        selected_month_index += 12
+                    if month_index < 4:
+                        month_index += 12
+                    if month_index <= selected_month_index and month_index != 0:
+                        total_budget += (amount * row.percentage_allocation) / 100
+                return total_budget
+        return 0
+
+    def get_month_start_end(self,fiscal_year, month_name):
+        """
+        Returns start_date and end_date of a given month in a fiscal year
+        """
+
+        # Fetch fiscal year dates
+        fy = frappe.get_doc("Fiscal Year", fiscal_year)
+        fy_start = getdate(fy.year_start_date)
+        fy_end = getdate(fy.year_end_date)
+
+        # Month name to month number
+        month_number = list(calendar.month_name).index(month_name)
+
+        # Determine correct year for the month
+        year = fy_start.year
+        if month_number < fy_start.month:
+            year += 1
+
+        # Month start & end
+        start_date = date(year, month_number, 1)
+        last_day = calendar.monthrange(year, month_number)[1]
+        end_date = date(year, month_number, last_day)
+
+        # Safety check (month must lie within fiscal year)
+        if start_date < fy_start or end_date > fy_end:
+            frappe.throw(f"{month_name} is outside Fiscal Year {fiscal_year}")
+
+        return fy_start, end_date
+
     def on_submit(self):
         """Reallocate budget by updating Monthly Distribution and Budget"""
         self.reallocate_budget()
@@ -188,6 +293,14 @@ class BudgetReallocation(Document):
         
         new_budget.insert()
         new_budget.submit()
+        frappe.db.set_value(
+            self.doctype,
+            self.name,
+            {
+                "old_budget_link": old_budget_name,
+                "new_budget_link": new_budget.name
+            }
+        )
         
         frappe.db.commit()
     

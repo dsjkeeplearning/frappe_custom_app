@@ -280,13 +280,13 @@ class BudgetUpload(Document):
                 # Budget control settings
                 budget.applicable_on_material_request = 1
                 budget.action_if_annual_budget_exceeded_on_mr = "Stop"
-                budget.action_if_accumulated_monthly_budget_exceeded_on_mr = "Warn"
+                budget.action_if_accumulated_monthly_budget_exceeded_on_mr = "Stop"
                 budget.applicable_on_purchase_order = 1
                 budget.action_if_annual_budget_exceeded_on_po = "Stop"
-                budget.action_if_accumulated_monthly_budget_exceeded_on_po = "Warn"
+                budget.action_if_accumulated_monthly_budget_exceeded_on_po = "Stop"
                 budget.applicable_on_booking_actual_expenses = 1
                 budget.action_if_annual_budget_exceeded = "Stop"
-                budget.action_if_accumulated_monthly_budget_exceeded = "Warn"
+                budget.action_if_accumulated_monthly_budget_exceeded = "Stop"
                 
                 # Add account
                 budget.append('accounts', {

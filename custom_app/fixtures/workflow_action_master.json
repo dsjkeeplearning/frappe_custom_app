@@ -16,9 +16,9 @@
  {
   "docstatus": 0,
   "doctype": "Workflow Action Master",
-  "modified": "2025-10-01 12:17:46.602802",
-  "name": "Approve",
-  "workflow_action_name": "Approve"
+  "modified": "2026-01-22 13:14:20.599808",
+  "name": "Amend",
+  "workflow_action_name": "Amend"
  },
  {
   "docstatus": 0,
@@ -26,5 +26,26 @@
   "modified": "2025-10-01 12:17:46.603367",
   "name": "Reject",
   "workflow_action_name": "Reject"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow Action Master",
+  "modified": "2026-01-22 15:52:11.570743",
+  "name": "Finance Approve",
+  "workflow_action_name": "Finance Approve"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow Action Master",
+  "modified": "2026-01-22 15:52:38.104521",
+  "name": "Finance Reject",
+  "workflow_action_name": "Finance Reject"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow Action Master",
+  "modified": "2025-10-01 12:17:46.602802",
+  "name": "Approve",
+  "workflow_action_name": "Approve"
  }
 ]

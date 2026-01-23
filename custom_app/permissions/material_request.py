@@ -4,7 +4,7 @@ def material_request_permission_query(user):
     roles = frappe.get_roles(user)
 
     # System Manager → everything
-    if "System Manager" in roles:
+    if "System Manager" in roles or "Auditor" in roles:
         return ""
 
     conditions = []

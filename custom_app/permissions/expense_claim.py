@@ -4,21 +4,21 @@ def expense_claim_permission_query(user):
     roles = frappe.get_roles(user)
 
     # System Manager → everything
-    if "System Manager" in roles:
+    if "System Manager" in roles or "Auditor" in roles:
         return ""
 
     conditions = []
 
-    # AP User → all except draft
-    if "AP User" in roles:
+    # Finance Approver-> approved, finance approved, cancelled(in workflow state)
+    if "Finance Approver" in roles:
         conditions.append(
-            "`tabExpense Claim`.`status` != 'Draft'"
+            "`tabExpense Claim`.`workflow_state` IN ('Approved', 'Finance Approved', 'Cancelled')"
         )
 
-    # AP Manager → all except draft
-    if "AP Manager" in roles:
+    # AP User and AP Manager →  finance approved(in workflow state)
+    if "AP User" in roles or "AP Manager" in roles:
         conditions.append(
-            "`tabExpense Claim`.`status` != 'Draft'"
+            "`tabExpense Claim`.`workflow_state` IN ('Finance Approved')"
         )
 
     # Expense Approver → only assigned to him (User ID stored)

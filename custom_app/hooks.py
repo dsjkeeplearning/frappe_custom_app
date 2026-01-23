@@ -20,7 +20,7 @@ override_whitelisted_methods = {
     "erpnext.stock.doctype.material_request.material_request.make_purchase_order":
         "custom_app.overrides.material_request.make_purchase_order",
 	"erpnext.buying.doctype.request_for_quotation.request_for_quotation.make_supplier_quotation_from_rfq":
-	    "custom_app.overrides.rfq.make_supplier_quotation_from_rfq"
+	    "custom_app.overrides.rfq.make_supplier_quotation_from_rfq",
 }
 
 doc_events = {
@@ -45,6 +45,9 @@ doc_events = {
     "Expense Claim": {
         "before_save": "custom_app.api.expense_claim.update_item_cost_center"
     },
+    "Payment Entry": {
+        "validate": "custom_app.api.payment_entry.validate"
+    }
 }
 
 permission_query_conditions = {
@@ -98,7 +101,8 @@ fixtures = [
                     "Procurement Approver",
                     "Finance Approver",
                     "AP User",
-                    "AP Manager"
+                    "AP Manager",
+                    "Auditor",
                 ]
             ]
         ]
@@ -116,7 +120,8 @@ fixtures = [
                     "Finance Approver",
                     "AP User",
                     "AP Manager",
-                    "Employee"
+                    "Employee",
+                    "Auditor",
                 ]
             ]
         ]
@@ -134,11 +139,12 @@ fixtures = [
                     "Finance Approver",
                     "AP User",
                     "AP Manager",
-                    "Employee"
+                    "Employee",
+                    "Auditor",
                 ]
             ]
         ]
-    }
+    },
 ]
 
 

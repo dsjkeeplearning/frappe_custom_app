@@ -12,9 +12,36 @@
   "docstatus": 0,
   "doctype": "Workflow State",
   "icon": "",
-  "modified": "2026-01-19 17:07:18.404502",
+  "modified": "2026-01-22 16:18:04.792379",
+  "name": "Finance Approved",
+  "style": "Success",
+  "workflow_state_name": "Finance Approved"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2026-01-22 16:18:45.267406",
+  "name": "Finance Rejected",
+  "style": "Danger",
+  "workflow_state_name": "Finance Rejected"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "remove",
+  "modified": "2025-10-01 12:17:46.593564",
+  "name": "Rejected",
+  "style": "Danger",
+  "workflow_state_name": "Rejected"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2026-01-22 16:18:19.207496",
   "name": "Cancelled",
-  "style": "",
+  "style": "Danger",
   "workflow_state_name": "Cancelled"
  },
  {
@@ -25,15 +52,6 @@
   "name": "Approved",
   "style": "Success",
   "workflow_state_name": "Approved"
- },
- {
-  "docstatus": 0,
-  "doctype": "Workflow State",
-  "icon": "remove",
-  "modified": "2025-10-01 12:17:46.593564",
-  "name": "Rejected",
-  "style": "Danger",
-  "workflow_state_name": "Rejected"
  },
  {
   "docstatus": 0,

@@ -2,7 +2,7 @@
  "actions": [],
  "allow_rename": 1,
  "autoname": "naming_series:",
- "creation": "2026-01-19 14:50:00.000000",
+ "creation": "2026-01-19 14:50:00",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
@@ -26,7 +26,13 @@
   "column_break_5",
   "master_budget_limit",
   "total_allocated_budget",
-  "amended_from"
+  "amended_from",
+  "section_break_ovrx",
+  "old_budget_link",
+  "column_break_fjxf",
+  "new_budget_link",
+  "reason_section",
+  "reason"
  ],
  "fields": [
   {
@@ -155,12 +161,47 @@
    "options": "Budget Reallocation",
    "print_hide": 1,
    "read_only": 1
+  },
+  {
+   "fieldname": "reason_section",
+   "fieldtype": "Section Break",
+   "label": "Reason"
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Reason for Budget Changes",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_ovrx",
+   "fieldtype": "Section Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "old_budget_link",
+   "fieldtype": "Link",
+   "label": "Old Budget Link",
+   "options": "Budget",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_fjxf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "new_budget_link",
+   "fieldtype": "Link",
+   "label": "New Budget Link",
+   "options": "Budget",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-19 14:50:00.000000",
+ "modified": "2026-01-23 13:24:08.374416",
  "modified_by": "Administrator",
  "module": "Custom App",
  "name": "Budget Reallocation",
@@ -192,6 +233,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
