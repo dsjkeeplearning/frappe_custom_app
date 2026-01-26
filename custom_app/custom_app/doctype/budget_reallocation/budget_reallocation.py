@@ -277,6 +277,11 @@ class BudgetReallocation(Document):
         """Cancel the current budget and create an amended version"""
         # Store the old name
         old_budget_name = budget.name
+
+        # 🔥 IMPORTANT: Ignore link validations
+        budget.flags.ignore_links = True
+        budget.flags.ignore_validate = True
+        budget.flags.ignore_mandatory = True
         
         # Cancel the budget
         budget.cancel()
@@ -293,15 +298,17 @@ class BudgetReallocation(Document):
         
         new_budget.insert()
         new_budget.submit()
+        # add old budget , new budget , approver name, date time in budget reallocation doctype
         frappe.db.set_value(
             self.doctype,
             self.name,
             {
                 "old_budget_link": old_budget_name,
-                "new_budget_link": new_budget.name
+                "new_budget_link": new_budget.name,
+                "approver": frappe.session.user,
+                "approval_date": frappe.utils.now_datetime(),
             }
         )
-        
         frappe.db.commit()
     
     def get_budget_doc(self):

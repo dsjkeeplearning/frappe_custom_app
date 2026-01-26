@@ -29,8 +29,10 @@
   "amended_from",
   "section_break_ovrx",
   "old_budget_link",
+  "approver",
   "column_break_fjxf",
   "new_budget_link",
+  "approval_date",
   "reason_section",
   "reason"
  ],
@@ -175,7 +177,8 @@
   },
   {
    "fieldname": "section_break_ovrx",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Information"
   },
   {
    "allow_on_submit": 1,
@@ -196,12 +199,25 @@
    "label": "New Budget Link",
    "options": "Budget",
    "read_only": 1
+  },
+  {
+   "fieldname": "approver",
+   "fieldtype": "Link",
+   "label": "Approver",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "approval_date",
+   "fieldtype": "Datetime",
+   "label": "Approval Date",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-23 13:24:08.374416",
+ "modified": "2026-01-26 12:05:21.916940",
  "modified_by": "Administrator",
  "module": "Custom App",
  "name": "Budget Reallocation",

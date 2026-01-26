@@ -1,0 +1,34 @@
+{
+ "add_total_row": 0,
+ "add_translate_data": 0,
+ "columns": [],
+ "creation": "2026-01-24 11:05:34.351899",
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [],
+ "idx": 0,
+ "is_standard": "Yes",
+ "letter_head": null,
+ "modified": "2026-01-24 11:05:34.351899",
+ "modified_by": "Administrator",
+ "module": "Custom App",
+ "name": "Budget Version History Report",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "ref_doctype": "Budget",
+ "report_name": "Budget Version History Report",
+ "report_type": "Script Report",
+ "roles": [
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "Finance Approver"
+  },
+  {
+   "role": "Auditor"
+  }
+ ],
+ "timeout": 0
+}

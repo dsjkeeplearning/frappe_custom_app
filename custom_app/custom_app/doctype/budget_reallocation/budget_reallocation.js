@@ -1,4 +1,14 @@
 frappe.ui.form.on('Budget Reallocation', {
+    setup(frm) {
+        frm.set_query('account', function () {
+            return {
+                filters: {
+                    company: frm.doc.company,
+                    is_group: 0
+                }
+            };
+        });
+    },
     company(frm) {
         // Clear dependent fields
         frm.set_value('cost_center', null);

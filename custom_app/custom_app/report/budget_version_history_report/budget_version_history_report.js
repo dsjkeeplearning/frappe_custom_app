@@ -1,7 +1,7 @@
 // Copyright (c) 2026, . and contributors
 // For license information, please see license.txt
 
-frappe.query_reports["Budget Committed Actual Report"] = {
+frappe.query_reports["Budget Version History Report"] = {
 	"filters": [
 		{
             "fieldname": "company",
@@ -16,8 +16,8 @@ frappe.query_reports["Budget Committed Actual Report"] = {
             "label": __("Cost Center"),
             "fieldtype": "Link",
             "options": "Cost Center",
-            "reqd": 0,
-            get_query: function () {
+            "reqd": 1,
+			get_query: function () {
 				let company = frappe.query_report.get_filter_value("company");
 
 				if (!company) {
@@ -38,6 +38,26 @@ frappe.query_reports["Budget Committed Actual Report"] = {
             "options": "Fiscal Year",
             "default": frappe.defaults.get_user_default("fiscal_year"),
             "reqd": 1
+        },
+		{
+            "fieldname": "account",
+            "label": __("Account"),
+            "fieldtype": "Link",
+            "options": "Account",
+            "reqd": 1,
+			get_query: function () {
+				let company = frappe.query_report.get_filter_value("company");
+
+				if (!company) {
+					return {};
+				}
+
+				return {
+					filters: {
+						company: company
+					}
+				};
+			}
         }
 	]
 };
