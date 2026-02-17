@@ -109,46 +109,46 @@ fixtures = [
             ]
         ]
     },
-    {
-        "doctype": "DocPerm",
-        "filters": [
-            [
-                "role", 
-                "in", 
-                [
-                    "Procurement User", 
-                    "Finance User", 
-                    "Procurement Approver", 
-                    "Finance Approver",
-                    "AP User",
-                    "AP Manager",
-                    "Employee",
-                    "Auditor",
-                    "Expense Approver",
-                ]
-            ]
-        ]
-    },
-    {
-        "doctype": "Custom DocPerm",
-        "filters": [
-            [
-                "role", 
-                "in", 
-                [
-                    "Procurement User",
-                    "Finance User",
-                    "Procurement Approver",
-                    "Finance Approver",
-                    "AP User",
-                    "AP Manager",
-                    "Employee",
-                    "Auditor",
-                    "Expense Approver",
-                ]
-            ]
-        ]
-    },
+    # {
+    #     "doctype": "DocPerm",
+    #     "filters": [
+    #         [
+    #             "role", 
+    #             "in", 
+    #             [
+    #                 "Procurement User", 
+    #                 "Finance User", 
+    #                 "Procurement Approver", 
+    #                 "Finance Approver",
+    #                 "AP User",
+    #                 "AP Manager",
+    #                 "Employee",
+    #                 "Auditor",
+    #                 "Expense Approver",
+    #             ]
+    #         ]
+    #     ]
+    # },
+    # {
+    #     "doctype": "Custom DocPerm",
+    #     "filters": [
+    #         [
+    #             "role", 
+    #             "in", 
+    #             [
+    #                 "Procurement User",
+    #                 "Finance User",
+    #                 "Procurement Approver",
+    #                 "Finance Approver",
+    #                 "AP User",
+    #                 "AP Manager",
+    #                 "Employee",
+    #                 "Auditor",
+    #                 "Expense Approver",
+    #             ]
+    #         ]
+    #     ]
+    # },
 ]
 
 
