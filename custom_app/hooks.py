@@ -5,6 +5,7 @@ app_description = "Custom logic and overrides"
 app_email = "a@b.c"
 app_license = "mit"
 
+
 override_doctype_class = {
     "Attendance": "custom_app.overrides.attendance.CustomAttendance",
     "Leave Application": "custom_app.overrides.leave_application.CustomLeaveApplication",
