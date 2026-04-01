@@ -61,7 +61,7 @@
    "show_dashboard": 0,
    "sort_options": 0,
    "translatable": 1,
-   "unique": 1,
+   "unique": 0,
    "width": null
   },
   {
@@ -601,7 +601,7 @@
    "hide_border": 0,
    "hide_days": 0,
    "hide_seconds": 0,
-   "idx": 25,
+   "idx": 26,
    "ignore_user_permissions": 0,
    "ignore_xss_filter": 0,
    "in_global_search": 0,
@@ -793,7 +793,7 @@
    "hide_border": 0,
    "hide_days": 0,
    "hide_seconds": 0,
-   "idx": 26,
+   "idx": 27,
    "ignore_user_permissions": 0,
    "ignore_xss_filter": 0,
    "in_global_search": 0,
@@ -1581,7 +1581,7 @@
    "_comments": null,
    "_liked_by": null,
    "_user_tags": null,
-   "creation": "2026-04-01 12:04:24.120217",
+   "creation": "2026-04-01 14:03:27.755154",
    "default_value": null,
    "doc_type": "Asset",
    "docstatus": 0,
@@ -1589,7 +1589,7 @@
    "field_name": null,
    "idx": 0,
    "is_system_generated": 0,
-   "modified": "2026-04-01 12:04:24.120217",
+   "modified": "2026-04-01 14:03:27.755154",
    "modified_by": "Administrator",
    "module": null,
    "name": "Asset-main-field_order",
@@ -1597,7 +1597,7 @@
    "property": "field_order",
    "property_type": "Data",
    "row_name": null,
-   "value": "[\"custom_basic_details\", \"company\", \"item_code\", \"asset_category\", \"location\", \"custom_model_name__number\", \"custom_asset_id__serial_number\", \"item_name\", \"asset_owner\", \"asset_owner_company\", \"is_existing_asset\", \"is_composite_asset\", \"supplier\", \"customer\", \"image\", \"journal_entry_for_scrap\", \"column_break_3\", \"naming_series\", \"asset_name\", \"split_from\", \"custodian\", \"department\", \"disposal_date\", \"custom_serial_number\", \"custom_manufacturer\", \"notes\", \"custom_warranty_details\", \"custom_associated_warranty_documents\", \"custom_start_date_of_warranty\", \"custom_expiry_date_of_warranty\", \"purchase_date\", \"accounting_dimensions_section\", \"cost_center\", \"dimension_col_break\", \"purchase_details_section\", \"custom_column_break_f3mow\", \"custom_associated_purchase_documents\", \"gross_purchase_amount\", \"available_for_use_date\", \"custom_asset_resale_value\", \"column_break_23\", \"asset_quantity\", \"purchase_invoice_item\", \"purchase_invoice\", \"purchase_receipt_item\", \"purchase_receipt\", \"additional_asset_cost\", \"total_asset_cost\", \"section_break_23\", \"calculate_depreciation\", \"column_break_33\", \"opening_accumulated_depreciation\", \"opening_number_of_booked_depreciations\", \"is_fully_depreciated\", \"section_break_36\", \"finance_books\", \"section_break_33\", \"depreciation_method\", \"value_after_depreciation\", \"total_number_of_depreciations\", \"column_break_24\", \"frequency_of_depreciation\", \"next_depreciation_date\", \"depreciation_schedule_sb\", \"depreciation_schedule_view\", \"insurance_details\", \"policy_number\", \"insurer\", \"insured_value\", \"column_break_48\", \"insurance_start_date\", \"insurance_end_date\", \"comprehensive_insurance\", \"section_break_31\", \"maintenance_required\", \"other_details\", \"status\", \"booked_fixed_asset\", \"column_break_51\", \"purchase_amount\", \"default_finance_book\", \"depr_entry_posting_status\", \"amended_from\"]"
+   "value": "[\"custom_basic_details\", \"company\", \"item_code\", \"asset_category\", \"location\", \"custom_model_name__number\", \"custom_asset_id__serial_number\", \"item_name\", \"asset_owner\", \"asset_owner_company\", \"is_existing_asset\", \"is_composite_asset\", \"supplier\", \"customer\", \"image\", \"journal_entry_for_scrap\", \"column_break_3\", \"naming_series\", \"asset_name\", \"split_from\", \"custodian\", \"department\", \"disposal_date\", \"custom_serial_number\", \"custom_manufacturer\", \"custom_notes\", \"custom_warranty_details\", \"custom_associated_warranty_documents\", \"custom_start_date_of_warranty\", \"custom_expiry_date_of_warranty\", \"purchase_date\", \"accounting_dimensions_section\", \"cost_center\", \"dimension_col_break\", \"purchase_details_section\", \"custom_column_break_f3mow\", \"custom_associated_purchase_documents\", \"gross_purchase_amount\", \"available_for_use_date\", \"custom_asset_resale_value\", \"column_break_23\", \"asset_quantity\", \"purchase_invoice_item\", \"purchase_invoice\", \"purchase_receipt_item\", \"purchase_receipt\", \"additional_asset_cost\", \"total_asset_cost\", \"section_break_23\", \"calculate_depreciation\", \"column_break_33\", \"opening_accumulated_depreciation\", \"opening_number_of_booked_depreciations\", \"is_fully_depreciated\", \"section_break_36\", \"finance_books\", \"section_break_33\", \"depreciation_method\", \"value_after_depreciation\", \"total_number_of_depreciations\", \"column_break_24\", \"frequency_of_depreciation\", \"next_depreciation_date\", \"depreciation_schedule_sb\", \"depreciation_schedule_view\", \"insurance_details\", \"policy_number\", \"insurer\", \"insured_value\", \"column_break_48\", \"insurance_start_date\", \"insurance_end_date\", \"comprehensive_insurance\", \"section_break_31\", \"maintenance_required\", \"other_details\", \"status\", \"booked_fixed_asset\", \"column_break_51\", \"purchase_amount\", \"default_finance_book\", \"depr_entry_posting_status\", \"amended_from\"]"
   },
   {
    "_assign": null,
