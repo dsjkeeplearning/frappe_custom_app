@@ -1,7 +1,7 @@
 [
  {
   "align": "Center",
-  "content": "<div style=\"text-align: center;\">\n<img src=\"/files/Screenshot 2026-04-01 102607.png\" alt=\"CDE\" width=\"100.0\" style=\"width: 100.0px;\">\n</div>",
+  "content": "<div style=\"text-align: center;\">\n<img src=\"/files/Screenshot 2026-04-01 102607.png\" alt=\"CDE\" height=\"\" style=\"height: px;\">\n</div>",
   "disabled": 0,
   "docstatus": 0,
   "doctype": "Letter Head",
@@ -14,11 +14,11 @@
   "footer_source": "HTML",
   "header_script": null,
   "image": "/files/Screenshot 2026-04-01 102607.png",
-  "image_height": 50.0,
-  "image_width": 100.0,
+  "image_height": 0.0,
+  "image_width": 0.0,
   "is_default": 1,
   "letter_head_name": "CDE",
-  "modified": "2026-04-01 10:43:59.450999",
+  "modified": "2026-04-01 17:22:38.890364",
   "name": "CDE",
   "source": "Image"
  },

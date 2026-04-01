@@ -35,13 +35,22 @@ doc_events = {
         "on_update": "custom_app.api.user_permission.manage_user_permissions"
     },
     "Material Request": {
-        "before_save": "custom_app.api.material_request.update_item_cost_center"
+        "before_save": [
+            "custom_app.api.material_request.update_item_cost_center",
+            "custom_app.api.letter_head.set_letter_head"
+        ]
     },
     "Supplier Quotation": {
         "before_save": "custom_app.api.supplier_quotation.update_item_cost_center"
     },
     "Purchase Order": {
-        "before_save": "custom_app.api.purchase_order.validate_po_items"
+        "before_save": [
+            "custom_app.api.purchase_order.validate_po_items",
+            "custom_app.api.letter_head.set_letter_head"
+        ]
+    },
+    "Purchase Receipt": {
+        "before_save": "custom_app.api.letter_head.set_letter_head",
     },
     "Expense Claim": {
         "before_save": "custom_app.api.expense_claim.update_item_cost_center"
