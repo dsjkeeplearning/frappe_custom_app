@@ -59,6 +59,9 @@ doc_events = {
         "validate": "custom_app.api.payment_entry.validate",
         "before_save": "custom_app.api.payment_entry.before_save",
         "before_submit": "custom_app.api.payment_entry.before_submit"
+    },
+    "Supplier": {
+        "before_insert": "custom_app.api.supplier.set_vendor_code"
     }
 }
 
@@ -123,46 +126,6 @@ fixtures = [
         "doctype": "Letter Head",
         "filters": [["name", "in", ["VU", "CDE"]]]
     },
-    # {
-    #     "doctype": "DocPerm",
-    #     "filters": [
-    #         [
-    #             "role", 
-    #             "in", 
-    #             [
-    #                 "Procurement User", 
-    #                 "Finance User", 
-    #                 "Procurement Approver", 
-    #                 "Finance Approver",
-    #                 "AP User",
-    #                 "AP Manager",
-    #                 "Employee",
-    #                 "Auditor",
-    #                 "Expense Approver",
-    #             ]
-    #         ]
-    #     ]
-    # },
-    # {
-    #     "doctype": "Custom DocPerm",
-    #     "filters": [
-    #         [
-    #             "role", 
-    #             "in", 
-    #             [
-    #                 "Procurement User",
-    #                 "Finance User",
-    #                 "Procurement Approver",
-    #                 "Finance Approver",
-    #                 "AP User",
-    #                 "AP Manager",
-    #                 "Employee",
-    #                 "Auditor",
-    #                 "Expense Approver",
-    #             ]
-    #         ]
-    #     ]
-    # },
 ]
 
 
