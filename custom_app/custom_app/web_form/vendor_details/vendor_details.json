@@ -22,7 +22,7 @@
  "list_columns": [],
  "login_required": 0,
  "max_attachment_size": 0,
- "modified": "2026-04-03 10:45:12.264922",
+ "modified": "2026-04-09 12:14:57.404317",
  "modified_by": "Administrator",
  "module": "Custom App",
  "name": "vendor-details",
@@ -438,7 +438,7 @@
    "max_value": 0,
    "precision": "",
    "read_only": 0,
-   "reqd": 1,
+   "reqd": 0,
    "show_in_filter": 0
   },
   {
