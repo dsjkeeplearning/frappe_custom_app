@@ -121,11 +121,7 @@ fixtures = [
                 ]
             ]
         ]
-    },
-    {
-        "doctype": "Letter Head",
-        "filters": [["name", "in", ["VU", "CDE"]]]
-    },
+    }
 ]
 
 
