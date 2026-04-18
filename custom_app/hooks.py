@@ -38,7 +38,14 @@ doc_events = {
         "before_save": [
             "custom_app.api.material_request.update_item_cost_center",
             "custom_app.api.letter_head.set_letter_head"
-        ]
+        ],
+        "after_insert": (
+            "custom_app.api.material_request.notify_approver_on_create"
+        ),
+        "on_update": (
+            "custom_app.api.material_request"
+            ".notify_employee_on_status_change"
+        ),
     },
     "Supplier Quotation": {
         "before_save": "custom_app.api.supplier_quotation.update_item_cost_center"
@@ -53,7 +60,14 @@ doc_events = {
         "before_save": "custom_app.api.letter_head.set_letter_head",
     },
     "Expense Claim": {
-        "before_save": "custom_app.api.expense_claim.update_item_cost_center"
+        "before_save": "custom_app.api.expense_claim.update_item_cost_center",
+        "after_insert": (
+            "custom_app.api.expense_claim.notify_approver_on_create"
+        ),
+        "on_update": (
+            "custom_app.api.expense_claim.on_workflow_state_change"
+        ),
+        "on_update_after_submit": "custom_app.api.expense_claim.on_workflow_state_change"
     },
     "Payment Entry": {
         "validate": "custom_app.api.payment_entry.validate",

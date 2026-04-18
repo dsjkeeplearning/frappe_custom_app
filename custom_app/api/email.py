@@ -42,3 +42,13 @@ def set_company_email_account(doc, method):
 
     except Exception as e:
         frappe.log_error(f"Company-based Communication email routing failed: {e}")
+
+def send_company_email(recipients, subject, message, reference_doctype=None, reference_name=None):
+    frappe.sendmail(
+        recipients=recipients,
+        subject=subject,
+        message=message,
+        reference_doctype=reference_doctype,
+        reference_name=reference_name
+    )
+
