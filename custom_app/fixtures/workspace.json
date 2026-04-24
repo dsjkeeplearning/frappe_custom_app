@@ -411,7 +411,7 @@
  },
  {
   "charts": [],
-  "content": "[{\"id\":\"YguaE5tXD-\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Vendor &amp; Assets</span>\",\"col\":12}},{\"id\":\"9g8zDQU81H\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Vendor\",\"col\":3}},{\"id\":\"bD6o-o_IvX\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"View Vendors\",\"col\":3}},{\"id\":\"G85NcG5qBk\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"sDWI0GIbWO\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Asset\",\"col\":3}},{\"id\":\"heHyGfKI-K\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"View Assets\",\"col\":3}}]",
+  "content": "[{\"id\":\"YguaE5tXD-\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Vendor &amp; Assets</span>\",\"col\":12}},{\"id\":\"9g8zDQU81H\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Vendor\",\"col\":3}},{\"id\":\"bD6o-o_IvX\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"View Vendors\",\"col\":3}},{\"id\":\"G85NcG5qBk\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"sDWI0GIbWO\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Asset\",\"col\":3}},{\"id\":\"heHyGfKI-K\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"View Assets\",\"col\":3}},{\"id\":\"R6kQNbHiGf\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"PgStzKMq0O\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Asset Dashboard\",\"col\":3}}]",
   "custom_blocks": [],
   "docstatus": 0,
   "doctype": "Workspace",
@@ -422,7 +422,7 @@
   "is_hidden": 0,
   "label": "Vendor & Assets",
   "links": [],
-  "modified": "2026-04-10 10:58:57.065332",
+  "modified": "2026-04-24 12:57:16.177884",
   "module": null,
   "name": "Vendor & Assets",
   "number_cards": [],
@@ -433,6 +433,23 @@
   "roles": [],
   "sequence_id": 7.0,
   "shortcuts": [
+   {
+    "color": "Grey",
+    "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "Asset Dashboard",
+    "link_to": "asset-dashboard",
+    "parent": "Vendor & Assets",
+    "parentfield": "shortcuts",
+    "parenttype": "Workspace",
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "Page",
+    "url": null
+   },
    {
     "color": "Grey",
     "doc_view": "New",

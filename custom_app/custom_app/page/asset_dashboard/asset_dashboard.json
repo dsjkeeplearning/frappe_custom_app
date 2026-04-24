@@ -4,7 +4,7 @@
  "docstatus": 0,
  "doctype": "Page",
  "idx": 0,
- "modified": "2026-04-23 16:41:20.420883",
+ "modified": "2026-04-24 12:56:35.759886",
  "modified_by": "Administrator",
  "module": "Custom App",
  "name": "asset-dashboard",
@@ -13,11 +13,14 @@
  "roles": [
   {
    "role": "System Manager"
+  },
+  {
+   "role": "Asset Manager"
   }
  ],
  "script": null,
  "standard": "Yes",
  "style": null,
- "system_page": 1,
+ "system_page": 0,
  "title": "Asset Dashboard"
 }
