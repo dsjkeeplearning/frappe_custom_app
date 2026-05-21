@@ -132,6 +132,7 @@ fixtures = [
                     "AP User",
                     "AP Manager",
                     "Auditor",
+                    "Institution Head"
                 ]
             ]
         ]
