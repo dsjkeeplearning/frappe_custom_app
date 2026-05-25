@@ -1808,7 +1808,7 @@
   "is_hidden": 0,
   "label": "Budgeting",
   "links": [],
-  "modified": "2026-02-12 11:08:24.828859",
+  "modified": "2026-05-25 11:37:48.759954",
   "module": "HR",
   "name": "Budgeting",
   "number_cards": [],
@@ -1852,6 +1852,12 @@
     "parentfield": "roles",
     "parenttype": "Workspace",
     "role": "System Manager"
+   },
+   {
+    "parent": "Budgeting",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Institution Head"
    }
   ],
   "sequence_id": 4.0,
