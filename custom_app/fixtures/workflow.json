@@ -4,9 +4,9 @@
   "doctype": "Workflow",
   "document_type": "Material Request",
   "is_active": 1,
-  "modified": "2026-01-23 12:58:11.425421",
+  "modified": "2026-05-26 15:28:44.316179",
   "name": "Material Request 2 Step Verification",
-  "override_status": 0,
+  "override_status": 1,
   "send_email_alert": 0,
   "states": [
    {
@@ -124,9 +124,9 @@
   "doctype": "Workflow",
   "document_type": "Purchase Order",
   "is_active": 1,
-  "modified": "2026-01-20 17:11:44.294380",
+  "modified": "2026-05-26 15:28:05.576344",
   "name": "Purchase Order 2 Step Verification",
-  "override_status": 0,
+  "override_status": 1,
   "send_email_alert": 0,
   "states": [
    {
@@ -244,9 +244,9 @@
   "doctype": "Workflow",
   "document_type": "Purchase Invoice",
   "is_active": 1,
-  "modified": "2026-01-23 12:59:26.476526",
+  "modified": "2026-05-26 15:30:00.446886",
   "name": "Purchase Invoice 2 Step Verification",
-  "override_status": 0,
+  "override_status": 1,
   "send_email_alert": 0,
   "states": [
    {
@@ -364,9 +364,9 @@
   "doctype": "Workflow",
   "document_type": "Payment Entry",
   "is_active": 1,
-  "modified": "2026-01-23 12:59:09.694019",
+  "modified": "2026-05-26 15:29:14.330247",
   "name": "Payment Entry 2 Step Verification",
-  "override_status": 0,
+  "override_status": 1,
   "send_email_alert": 0,
   "states": [
    {
