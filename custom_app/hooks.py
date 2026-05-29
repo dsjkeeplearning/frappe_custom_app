@@ -138,6 +138,9 @@ fixtures = [
         ]
     }
 ]
+app_include_js = [
+    "https://cdn.jsdelivr.net/npm/chart.js"
+]
 
 
 # Apps

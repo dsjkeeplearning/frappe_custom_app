@@ -1,0 +1,26 @@
+{
+ "content": null,
+ "creation": "2026-05-28 16:33:48.532203",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-05-28 17:13:56.740816",
+ "modified_by": "Administrator",
+ "module": "Custom App",
+ "name": "hr-dashboard",
+ "owner": "Administrator",
+ "page_name": "hr-dashboard",
+ "roles": [
+  {
+   "role": "HR Manager"
+  },
+  {
+   "role": "HR User"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 1,
+ "title": ""
+}
