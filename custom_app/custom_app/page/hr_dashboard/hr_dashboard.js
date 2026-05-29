@@ -28,12 +28,65 @@ frappe.pages["hr-dashboard"].on_page_load = function (wrapper) {
 // ═══════════════════════════════════════════════════════════════
 class HRDashboard {
 	constructor(wrapper) {
-		this.wrapper      = wrapper;
-		this.student_counts = {};
-		this.filters      = { period: "month", company: "", department: "", school: "", date_from: "", date_to: "" };
-		this._charts      = {};   // chart.js instances keyed by canvas id
+		this.wrapper = wrapper;
+		this.filters = { period: "month", company: "", department: "", date_from: "", date_to: "" };
+		this._charts = {};
 		this.render_shell();
-		this.load_filter_options().then(() => this.load_all());
+		this._read_url_params();
+		this.load_filter_options().then(() => {
+			this._apply_url_params_to_ui();
+			this.load_all();
+		});
+	}
+
+	// ── READ URL PARAMS ────────────────────────────────────────────
+	_read_url_params() {
+		const p = new URLSearchParams(window.location.search);
+		if (p.get("period")) this.filters.period = p.get("period");
+		if (p.get("company")) this.filters.company = p.get("company");
+		if (p.get("department")) this.filters.department = p.get("department");
+		if (p.get("date_from")) this.filters.date_from = p.get("date_from");
+		if (p.get("date_to")) this.filters.date_to = p.get("date_to");
+
+		// If date params exist, force period to custom
+		if (this.filters.date_from && this.filters.date_to) {
+			this.filters.period = "custom";
+		}
+	}
+
+	// ── APPLY URL PARAMS TO UI (after selects are populated) ──────
+	_apply_url_params_to_ui() {
+		if (this.filters.company) document.getElementById("hr-f-company").value = this.filters.company;
+		if (this.filters.department) document.getElementById("hr-f-dept").value = this.filters.department;
+		if (this.filters.date_from) document.getElementById("hr-f-from").value = this.filters.date_from;
+		if (this.filters.date_to) document.getElementById("hr-f-to").value = this.filters.date_to;
+
+		// Set active period button
+		document.querySelectorAll(".hr-period-btn").forEach(b => {
+			b.classList.toggle("active", b.dataset.p === this.filters.period);
+		});
+
+		// Show/hide date range inputs
+		const dateRange = document.getElementById("hr-date-range");
+		if (this.filters.period === "custom") {
+			dateRange.style.display = "flex";
+		} else {
+			dateRange.style.display = "none";
+		}
+	}
+
+	// ── SYNC URL PARAMS ────────────────────────────────────────────
+	_sync_url() {
+		const p = new URLSearchParams();
+		if (this.filters.period) p.set("period", this.filters.period);
+		if (this.filters.company) p.set("company", this.filters.company);
+		if (this.filters.department) p.set("department", this.filters.department);
+		if (this.filters.period === "custom") {
+			if (this.filters.date_from) p.set("date_from", this.filters.date_from);
+			if (this.filters.date_to) p.set("date_to", this.filters.date_to);
+		}
+		const newUrl = window.location.pathname + (p.toString() ? "?" + p.toString() : "");
+		window.history.replaceState(null, "", newUrl);
 	}
 
 	// ── CSS ────────────────────────────────────────────────────────
@@ -74,7 +127,9 @@ class HRDashboard {
 .hr-period-btn{padding:6px 12px;font-size:12px;font-weight:500;border:none;background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;border-right:1px solid var(--border);}
 .hr-period-btn:last-child{border-right:none;}
 .hr-period-btn.active{background:var(--blue);color:#fff;}
+.hr-period-btn[data-p="custom"].active{background:var(--amber);color:#fff;}
 .hr-filter-sep{width:1px;height:24px;background:var(--border);margin:0 6px;}
+.hr-date-range{display:flex;align-items:center;gap:10px;}
 
 /* ── BODY */
 .hr-body{padding:24px 28px;}
@@ -149,13 +204,6 @@ class HRDashboard {
 .hr-mv-meta{font-size:11px;color:var(--muted);}
 .hr-mv-date{font-size:11px;color:var(--light);font-family:'JetBrains Mono',monospace;white-space:nowrap;}
 
-/* ── STUDENT INPUT */
-.hr-stu-input{width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:'JetBrains Mono',monospace;text-align:right;background:var(--bg);}
-.hr-stu-input:focus{outline:none;border-color:var(--blue);background:#fff;}
-
-/* ── STAT ROW */
-.hr-stat-row{display:flex;gap:4px;flex-wrap:wrap;margin-top:10px;}
-
 /* ── CANVAS */
 .hr-chart-wrap{position:relative;width:100%;margin-top:8px;}
 
@@ -171,6 +219,9 @@ class HRDashboard {
 .hr-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
 .hr-legend-lbl{color:var(--muted);flex:1;}
 .hr-legend-val{font-weight:700;font-family:'JetBrains Mono',monospace;}
+
+/* ── CUSTOM DATE HINT */
+.hr-custom-hint{font-size:11px;color:var(--amber);display:flex;align-items:center;gap:4px;margin-left:4px;}
 </style>
 
 <div id="hr-root">
@@ -192,6 +243,7 @@ class HRDashboard {
       <button class="hr-period-btn active" data-p="month">Month</button>
       <button class="hr-period-btn" data-p="quarter">Quarter</button>
       <button class="hr-period-btn" data-p="year">Year</button>
+      <button class="hr-period-btn" data-p="custom">Custom</button>
     </div>
   </div>
   <div class="hr-filter-sep"></div>
@@ -203,18 +255,18 @@ class HRDashboard {
     <span class="hr-filter-label">Department</span>
     <select class="hr-filter-select" id="hr-f-dept"><option value="">All</option></select>
   </div>
-  <div class="hr-filter-group">
-    <span class="hr-filter-label">School</span>
-    <select class="hr-filter-select" id="hr-f-school"><option value="">All</option></select>
-  </div>
   <div class="hr-filter-sep"></div>
-  <div class="hr-filter-group">
-    <span class="hr-filter-label">From</span>
-    <input type="date" class="hr-filter-input" id="hr-f-from" />
-  </div>
-  <div class="hr-filter-group">
-    <span class="hr-filter-label">To</span>
-    <input type="date" class="hr-filter-input" id="hr-f-to" />
+  <!-- Date range — only visible when Custom is selected -->
+  <div id="hr-date-range" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;">
+    <div class="hr-filter-group">
+      <span class="hr-filter-label">From</span>
+      <input type="date" class="hr-filter-input" id="hr-f-from" />
+    </div>
+    <div class="hr-filter-group">
+      <span class="hr-filter-label">To</span>
+      <input type="date" class="hr-filter-input" id="hr-f-to" />
+    </div>
+    <span id="hr-custom-hint" class="hr-custom-hint" style="display:none;">⚠ Select both dates to load</span>
   </div>
 </div>
 
@@ -287,27 +339,18 @@ class HRDashboard {
     </div>
   </div>
 
-  <!-- ROW 7: Department chart + School table -->
+  <!-- ROW 7: Department chart only -->
   <div class="hr-section">
     <div class="hr-section-title">Institution Breakdown</div>
-    <div class="hr-g2">
+    <div class="hr-g1">
       <div class="hr-card">
         <div class="hr-card-hd"><div class="hr-card-title">Headcount by Department (Top 10)</div></div>
         <div class="hr-chart-wrap"><canvas id="chart-dept" height="180"></canvas></div>
       </div>
-      <div class="hr-card" id="hr-card-schooldata"><div class="hr-loading"><div class="hr-spin"></div></div></div>
     </div>
   </div>
 
-  <!-- ROW 8: Faculty-Student Ratio -->
-  <div class="hr-section">
-    <div class="hr-section-title">Faculty-Student Ratio</div>
-    <div class="hr-g1">
-      <div class="hr-card" id="hr-card-ratios"><div class="hr-loading"><div class="hr-spin"></div></div></div>
-    </div>
-  </div>
-
-  <!-- ROW 9: Recent Movements -->
+  <!-- ROW 8: Recent Movements -->
   <div class="hr-section">
     <div class="hr-section-title">Recent Movements</div>
     <div class="hr-g2">
@@ -320,19 +363,77 @@ class HRDashboard {
 </div><!-- /#hr-root -->
 		`);
 
-		// Period toggle events
+		// ── Period toggle
 		document.querySelectorAll(".hr-period-btn").forEach(btn => {
 			btn.addEventListener("click", () => {
 				document.querySelectorAll(".hr-period-btn").forEach(b => b.classList.remove("active"));
 				btn.classList.add("active");
 				this.filters.period = btn.dataset.p;
+
+				const dateRange = document.getElementById("hr-date-range");
+				const hint = document.getElementById("hr-custom-hint");
+
+				if (this.filters.period === "custom") {
+					dateRange.style.display = "flex";
+					hint.style.display = "inline-flex";
+					// Don't reload yet — wait for both dates
+				} else {
+					dateRange.style.display = "none";
+					hint.style.display = "none";
+					this.filters.date_from = "";
+					this.filters.date_to = "";
+					document.getElementById("hr-f-from").value = "";
+					document.getElementById("hr-f-to").value = "";
+					this._sync_url();
+					this.load_all();
+				}
+			});
+		});
+
+		// ── Company / Department dropdowns
+		["hr-f-company", "hr-f-dept"].forEach(id => {
+			document.getElementById(id).addEventListener("change", () => {
+				this.filters.company = document.getElementById("hr-f-company").value;
+				this.filters.department = document.getElementById("hr-f-dept").value;
+				this._sync_url();
 				this.load_all();
 			});
 		});
 
-		// Filter change events
-		["hr-f-company","hr-f-dept","hr-f-school","hr-f-from","hr-f-to"].forEach(id => {
-			document.getElementById(id).addEventListener("change", () => this._read_filters_and_reload());
+		// ── Date inputs — only fire when BOTH are filled and period is custom
+		// ── Date inputs — only fire when BOTH are filled, period is custom, and from < to
+		["hr-f-from", "hr-f-to"].forEach(id => {
+			document.getElementById(id).addEventListener("change", () => {
+				if (this.filters.period !== "custom") return;
+				this.filters.date_from = document.getElementById("hr-f-from").value;
+				this.filters.date_to = document.getElementById("hr-f-to").value;
+
+				const hint = document.getElementById("hr-custom-hint");
+
+				if (this.filters.date_from && this.filters.date_to) {
+					if (this.filters.date_from >= this.filters.date_to) {
+						// Invalid range — show error, block load
+						hint.textContent = "⚠ From date must be before To date";
+						hint.style.color = "var(--red)";
+						hint.style.background = "var(--red-lt)";
+						hint.style.display = "inline-flex";
+						return;
+					}
+					// Valid range — clear hint and load
+					hint.style.display = "none";
+					hint.textContent = "⚠ Select both dates to load";
+					hint.style.color = "";
+					hint.style.background = "";
+					this._sync_url();
+					this.load_all();
+				} else {
+					// One or both dates missing
+					hint.textContent = "⚠ Select both dates to load";
+					hint.style.color = "";
+					hint.style.background = "";
+					hint.style.display = "inline-flex";
+				}
+			});
 		});
 	}
 
@@ -344,9 +445,9 @@ class HRDashboard {
 				callback: (r) => {
 					if (!r.message) { resolve(); return; }
 					const d = r.message;
-					["company","department","school"].forEach((key, i) => {
-						const ids = ["hr-f-company","hr-f-dept","hr-f-school"];
-						const list = [d.companies, d.departments, d.schools][i];
+					["company", "department"].forEach((key, i) => {
+						const ids = ["hr-f-company", "hr-f-dept"];
+						const list = [d.companies, d.departments][i];
 						const sel = document.getElementById(ids[i]);
 						list.forEach(v => {
 							const o = document.createElement("option");
@@ -360,15 +461,6 @@ class HRDashboard {
 		});
 	}
 
-	_read_filters_and_reload() {
-		this.filters.company    = document.getElementById("hr-f-company").value;
-		this.filters.department = document.getElementById("hr-f-dept").value;
-		this.filters.school     = document.getElementById("hr-f-school").value;
-		this.filters.date_from  = document.getElementById("hr-f-from").value;
-		this.filters.date_to    = document.getElementById("hr-f-to").value;
-		this.load_all();
-	}
-
 	// ── CHART HELPER ───────────────────────────────────────────────
 	_make_chart(id, config) {
 		const el = document.getElementById(id);
@@ -377,8 +469,20 @@ class HRDashboard {
 		this._charts[id] = new Chart(el.getContext("2d"), config);
 	}
 
+	// ── COMMON ARGS ────────────────────────────────────────────────
+	// Pass date_from/date_to only when period is custom
+	_date_args() {
+		if (this.filters.period === "custom") {
+			return { date_from: this.filters.date_from, date_to: this.filters.date_to };
+		}
+		return { date_from: "", date_to: "" };
+	}
+
 	// ── LOAD ALL ───────────────────────────────────────────────────
 	load_all() {
+		// Guard: if custom period but dates not set, don't load
+		if (this.filters.period === "custom" && (!this.filters.date_from || !this.filters.date_to)) return;
+
 		const now = new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
 		document.getElementById("hr-last-updated").textContent = `Updated: ${now}`;
 		this.load_headcount();
@@ -387,7 +491,6 @@ class HRDashboard {
 		this.load_offer_acceptance();
 		this.load_pipeline();
 		this.load_staffing_plan();
-		this.load_school_ratios();
 		this.load_recent_movements();
 	}
 
@@ -395,26 +498,30 @@ class HRDashboard {
 	load_headcount() {
 		frappe.call({
 			method: "custom_app.custom_app.page.hr_dashboard.hr_dashboard.get_headcount_summary",
-			args: { company: this.filters.company, department: this.filters.department, school: this.filters.school },
+			args: {
+				period: this.filters.period,
+				company: this.filters.company,
+				department: this.filters.department,
+				...this._date_args()
+			},
 			callback: (r) => {
 				if (!r.message) return;
 				const d = r.message;
 
-				// KPI card 1 — total headcount
 				document.getElementById("hr-kpi-headcount").innerHTML = `
 					<div class="hr-card-hd">
 						<div class="hr-card-title">Total Headcount</div>
 						<div class="hr-card-icon" style="background:var(--blue-lt);">👥</div>
 					</div>
 					<div class="hr-metric">${d.total}</div>
-					<div class="hr-metric-label">Active employees</div>
+					<div class="hr-metric-label">Active during period</div>
 					<div class="hr-metric-sub">
 						<span class="hb hb-blue">Teaching: ${d.teaching}</span>&nbsp;
 						<span class="hb hb-purple">Non-Teaching: ${d.non_teaching}</span>
 						${d.unclassified > 0 ? `&nbsp;<span class="hb hb-amber">Unclassified: ${d.unclassified}</span>` : ""}
+						<br><span style="color:var(--light)">${d.period_label}</span>
 					</div>`;
 
-				// KPI card 2 — faculty %
 				const pct = d.teaching_pct;
 				const pctColor = pct >= 50 ? "var(--green)" : pct >= 30 ? "var(--amber)" : "var(--red)";
 				document.getElementById("hr-kpi-faculty-pct").innerHTML = `
@@ -425,25 +532,17 @@ class HRDashboard {
 					<div class="hr-metric" style="color:${pctColor}">${pct}<span class="hr-metric-unit">%</span></div>
 					<div class="hr-metric-label">${d.teaching} teaching of ${d.total} total</div>
 					<div class="hr-metric-sub">
-						Non-Teaching: ${d.non_teaching} (${d.total > 0 ? Math.round((d.non_teaching/d.total)*100) : 0}%)
+						Non-Teaching: ${d.non_teaching} (${d.total > 0 ? Math.round((d.non_teaching / d.total) * 100) : 0}%)
 					</div>`;
 
-				// Donut chart card
 				this._render_donut(d.teaching, d.non_teaching, d.unclassified);
 
-				// Joining trend bar chart
 				if (d.join_trend && d.join_trend.length) {
 					this._make_chart("chart-join-trend", {
 						type: "bar",
 						data: {
 							labels: d.join_trend.map(t => t.label),
-							datasets: [{
-								label: "Joiners",
-								data: d.join_trend.map(t => t.value),
-								backgroundColor: "#2563eb",
-								borderRadius: 5,
-								borderSkipped: false,
-							}]
+							datasets: [{ label: "Joiners", data: d.join_trend.map(t => t.value), backgroundColor: "#2563eb", borderRadius: 5, borderSkipped: false }]
 						},
 						options: {
 							responsive: true, maintainAspectRatio: true,
@@ -456,7 +555,6 @@ class HRDashboard {
 					});
 				}
 
-				// Dept horizontal bar chart
 				if (d.dept_data && d.dept_data.length) {
 					this._make_chart("chart-dept", {
 						type: "bar",
@@ -466,15 +564,13 @@ class HRDashboard {
 								label: "Employees",
 								data: d.dept_data.map(r => r.total),
 								backgroundColor: d.dept_data.map((_, i) =>
-									["#2563eb","#7c3aed","#16a34a","#d97706","#0d9488","#dc2626","#f59e0b","#3b82f6","#8b5cf6","#10b981"][i % 10]
+									["#2563eb", "#7c3aed", "#16a34a", "#d97706", "#0d9488", "#dc2626", "#f59e0b", "#3b82f6", "#8b5cf6", "#10b981"][i % 10]
 								),
-								borderRadius: 4,
-								borderSkipped: false,
+								borderRadius: 4, borderSkipped: false,
 							}]
 						},
 						options: {
-							indexAxis: "y",
-							responsive: true, maintainAspectRatio: true,
+							indexAxis: "y", responsive: true, maintainAspectRatio: true,
 							plugins: { legend: { display: false } },
 							scales: {
 								x: { beginAtZero: true, grid: { color: "#f0f0f0" }, ticks: { font: { size: 10 } } },
@@ -490,8 +586,8 @@ class HRDashboard {
 	_render_donut(teaching, non_teaching, unclassified) {
 		const total = teaching + non_teaching + unclassified || 1;
 		const data = [
-			{ label: "Teaching",      value: teaching,     color: "#2563eb" },
-			{ label: "Non-Teaching",  value: non_teaching, color: "#7c3aed" },
+			{ label: "Teaching", value: teaching, color: "#2563eb" },
+			{ label: "Non-Teaching", value: non_teaching, color: "#7c3aed" },
 			...(unclassified > 0 ? [{ label: "Unclassified", value: unclassified, color: "#d97706" }] : [])
 		];
 		const teachingPct = Math.round((teaching / total) * 100);
@@ -513,7 +609,6 @@ class HRDashboard {
 				</div>
 			</div>`;
 
-		// Chart.js doughnut
 		this._make_chart("chart-donut", {
 			type: "doughnut",
 			data: {
@@ -522,7 +617,7 @@ class HRDashboard {
 			},
 			options: {
 				responsive: false, cutout: "70%",
-				plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} (${Math.round((ctx.parsed/total)*100)}%)` } } }
+				plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} (${Math.round((ctx.parsed / total) * 100)}%)` } } }
 			}
 		});
 	}
@@ -531,13 +626,17 @@ class HRDashboard {
 	load_attrition() {
 		frappe.call({
 			method: "custom_app.custom_app.page.hr_dashboard.hr_dashboard.get_attrition_rate",
-			args: { period: this.filters.period, company: this.filters.company, department: this.filters.department, school: this.filters.school },
+			args: {
+				period: this.filters.period,
+				company: this.filters.company,
+				department: this.filters.department,
+				...this._date_args()
+			},
 			callback: (r) => {
 				if (!r.message) return;
 				const d = r.message;
 				const rateColor = d.rate > 15 ? "var(--red)" : d.rate > 8 ? "var(--amber)" : "var(--green)";
 
-				// KPI card 3
 				document.getElementById("hr-kpi-attrition").innerHTML = `
 					<div class="hr-card-hd">
 						<div class="hr-card-title">Attrition Rate</div>
@@ -548,22 +647,15 @@ class HRDashboard {
 					<div class="hr-metric-sub">${d.period_label}</div>
 					${d.missing_relieving_date > 0 ? `<div class="hr-caveat">⚠ ${d.missing_relieving_date} missing relieving date</div>` : ""}`;
 
-				// Attrition trend line chart
 				if (d.trend && d.trend.length) {
 					this._make_chart("chart-attrition-trend", {
 						type: "line",
 						data: {
 							labels: d.trend.map(t => t.label),
 							datasets: [{
-								label: "Separations",
-								data: d.trend.map(t => t.value),
-								borderColor: "#dc2626",
-								backgroundColor: "rgba(220,38,38,.08)",
-								borderWidth: 2,
-								pointBackgroundColor: "#dc2626",
-								pointRadius: 4,
-								fill: true,
-								tension: 0.3,
+								label: "Separations", data: d.trend.map(t => t.value),
+								borderColor: "#dc2626", backgroundColor: "rgba(220,38,38,.08)",
+								borderWidth: 2, pointBackgroundColor: "#dc2626", pointRadius: 4, fill: true, tension: 0.3,
 							}]
 						},
 						options: {
@@ -584,7 +676,11 @@ class HRDashboard {
 	load_time_to_hire() {
 		frappe.call({
 			method: "custom_app.custom_app.page.hr_dashboard.hr_dashboard.get_time_to_hire",
-			args: { company: this.filters.company, department: this.filters.department, date_from: this.filters.date_from, date_to: this.filters.date_to },
+			args: {
+				company: this.filters.company,
+				department: this.filters.department,
+				...this._date_args()
+			},
 			callback: (r) => {
 				if (!r.message) return;
 				const d = r.message;
@@ -620,15 +716,9 @@ class HRDashboard {
 						data: {
 							labels: d.trend.map(t => t.label),
 							datasets: [{
-								label: "Avg days to hire",
-								data: d.trend.map(t => t.value),
-								borderColor: "#0d9488",
-								backgroundColor: "rgba(13,148,136,.08)",
-								borderWidth: 2,
-								pointBackgroundColor: "#0d9488",
-								pointRadius: 4,
-								fill: true,
-								tension: 0.3,
+								label: "Avg days to hire", data: d.trend.map(t => t.value),
+								borderColor: "#0d9488", backgroundColor: "rgba(13,148,136,.08)",
+								borderWidth: 2, pointBackgroundColor: "#0d9488", pointRadius: 4, fill: true, tension: 0.3,
 							}]
 						},
 						options: {
@@ -649,13 +739,15 @@ class HRDashboard {
 	load_offer_acceptance() {
 		frappe.call({
 			method: "custom_app.custom_app.page.hr_dashboard.hr_dashboard.get_offer_acceptance",
-			args: { company: this.filters.company, date_from: this.filters.date_from, date_to: this.filters.date_to },
+			args: {
+				company: this.filters.company,
+				...this._date_args()
+			},
 			callback: (r) => {
 				if (!r.message) return;
 				const d = r.message;
 				const rateColor = d.rate >= 80 ? "var(--green)" : d.rate >= 60 ? "var(--amber)" : "var(--red)";
 
-				// KPI card 4
 				document.getElementById("hr-kpi-offer").innerHTML = `
 					<div class="hr-card-hd">
 						<div class="hr-card-title">Offer Acceptance</div>
@@ -669,12 +761,11 @@ class HRDashboard {
 					</div>
 					${d.awaiting > 0 ? `<div class="hr-caveat">⚠ ${d.awaiting} offers awaiting response</div>` : ""}`;
 
-				// Offer outcome doughnut
 				this._make_chart("chart-offer-status", {
 					type: "doughnut",
 					data: {
 						labels: ["Accepted", "Rejected", "Awaiting"],
-						datasets: [{ data: d.chart_data, backgroundColor: ["#16a34a","#dc2626","#d97706"], borderWidth: 2, borderColor: "#fff", hoverOffset: 4 }]
+						datasets: [{ data: d.chart_data, backgroundColor: ["#16a34a", "#dc2626", "#d97706"], borderWidth: 2, borderColor: "#fff", hoverOffset: 4 }]
 					},
 					options: {
 						responsive: true, cutout: "65%",
@@ -692,19 +783,22 @@ class HRDashboard {
 	load_pipeline() {
 		frappe.call({
 			method: "custom_app.custom_app.page.hr_dashboard.hr_dashboard.get_recruitment_pipeline",
-			args: { company: this.filters.company, department: this.filters.department, date_from: this.filters.date_from, date_to: this.filters.date_to },
+			args: {
+				company: this.filters.company,
+				department: this.filters.department,
+				...this._date_args()
+			},
 			callback: (r) => {
 				if (!r.message) return;
 				const d = r.message;
 
-				// ── FUNNEL
 				const steps = [
-					{ label: "Requisitions",  sub: `${d.requisitions.approved} approved`,     value: d.requisitions.total, color: "#eff6ff", tc: "#2563eb" },
-					{ label: "Job Openings",  sub: `${d.openings.open} open`,                  value: d.openings.total,      color: "#f5f3ff", tc: "#7c3aed" },
-					{ label: "Applicants",    sub: `${d.applicants.open} active`,               value: d.applicants.total,    color: "#fffbeb", tc: "#d97706" },
-					{ label: "Offers Sent",   sub: `${d.offers.awaiting} awaiting`,             value: d.offers.sent,         color: "#f0fdfa", tc: "#0d9488" },
-					{ label: "Accepted",      sub: `${d.offers.rejected} rejected`,             value: d.offers.accepted,     color: "#f0fdf4", tc: "#16a34a" },
-					{ label: "Hired",         sub: "employees created",                          value: d.hired,               color: "#f0fdf4", tc: "#16a34a" },
+					{ label: "Requisitions", sub: `${d.requisitions.approved} approved`, value: d.requisitions.total, color: "#eff6ff", tc: "#2563eb" },
+					{ label: "Job Openings", sub: `${d.openings.open} open`, value: d.openings.total, color: "#f5f3ff", tc: "#7c3aed" },
+					{ label: "Applicants", sub: `${d.applicants.open} active`, value: d.applicants.total, color: "#fffbeb", tc: "#d97706" },
+					{ label: "Offers Sent", sub: `${d.offers.awaiting} awaiting`, value: d.offers.sent, color: "#f0fdfa", tc: "#0d9488" },
+					{ label: "Accepted", sub: `${d.offers.rejected} rejected`, value: d.offers.accepted, color: "#f0fdf4", tc: "#16a34a" },
+					{ label: "Hired", sub: "employees created", value: d.hired, color: "#f0fdf4", tc: "#16a34a" },
 				];
 
 				const funnelHtml = steps.map((s, i) => `
@@ -715,7 +809,6 @@ class HRDashboard {
 						<div class="hr-funnel-sub">${s.sub}</div>
 					</div>`).join("");
 
-				// ── Applicant status badges
 				const appBadges = `
 					<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
 						<span class="hb hb-blue">Open: ${d.applicants.open}</span>
@@ -728,23 +821,19 @@ class HRDashboard {
 				document.getElementById("hr-card-pipeline").innerHTML = `
 					<div class="hr-card-hd">
 						<div class="hr-card-title">Full Hiring Funnel — Requisition to Hire</div>
-						<small style="color:var(--muted);font-size:10px;">Kanban view: Job Applicant list view</small>
 					</div>
 					<div class="hr-funnel">${funnelHtml}</div>
 					${appBadges}`;
 
-				// ── Requisition status bar chart
 				const reqD = d.requisitions.by_status;
 				this._make_chart("chart-req-status", {
 					type: "bar",
 					data: {
 						labels: Object.keys(reqD),
 						datasets: [{
-							label: "Count",
-							data: Object.values(reqD),
-							backgroundColor: ["#f59e0b","#2563eb","#16a34a","#dc2626","#9ca3af","#6b7280"],
-							borderRadius: 5,
-							borderSkipped: false,
+							label: "Count", data: Object.values(reqD),
+							backgroundColor: ["#f59e0b", "#2563eb", "#16a34a", "#dc2626", "#9ca3af", "#6b7280"],
+							borderRadius: 5, borderSkipped: false,
 						}]
 					},
 					options: {
@@ -764,7 +853,11 @@ class HRDashboard {
 	load_staffing_plan() {
 		frappe.call({
 			method: "custom_app.custom_app.page.hr_dashboard.hr_dashboard.get_staffing_vs_actuals",
-			args: { company: this.filters.company, department: this.filters.department },
+			args: {
+				company: this.filters.company,
+				department: this.filters.department,
+				...this._date_args()
+			},
 			callback: (r) => {
 				if (!r.message) return;
 				const rows = r.message.data;
@@ -781,7 +874,7 @@ class HRDashboard {
 
 				const tableRows = rows.map(row => {
 					const actual = row.actual || 0;
-					const pct    = row.planned > 0 ? Math.min(Math.round((actual / row.planned) * 100), 100) : 0;
+					const pct = row.planned > 0 ? Math.min(Math.round((actual / row.planned) * 100), 100) : 0;
 					const barColor = pct >= 100 ? "var(--green)" : pct >= 70 ? "var(--blue)" : "var(--amber)";
 					return `<tr>
 						<td><b>${row.designation}</b></td>
@@ -798,7 +891,7 @@ class HRDashboard {
 				document.getElementById("hr-card-staffingplan").innerHTML = `
 					<div class="hr-card-hd">
 						<div class="hr-card-title">Headcount vs Staffing Plan</div>
-						<small style="color:var(--muted);font-size:10px;">Company & Dept level · School-level not supported in Staffing Plan</small>
+						<small style="color:var(--muted);font-size:10px;">Company & Dept level</small>
 					</div>
 					<table class="hr-tbl">
 						<thead><tr><th>Designation</th><th class="center">Planned</th><th class="center">Actual</th><th>Fill Rate</th><th>Status</th></tr></thead>
@@ -808,86 +901,30 @@ class HRDashboard {
 		});
 	}
 
-	// ── 7. SCHOOL DATA + RATIOS ───────────────────────────────────
-	load_school_ratios() {
-		frappe.call({
-			method: "custom_app.custom_app.page.hr_dashboard.hr_dashboard.get_faculty_ratio",
-			args: { student_counts: JSON.stringify(this.student_counts), company: this.filters.company, school: this.filters.school },
-			callback: (r) => {
-				if (!r.message) return;
-				const data = r.message;
-
-				// School headcount table
-				const tableRows = data.map(row => `
-					<tr>
-						<td><b>${row.school}</b></td>
-						<td class="center">${row.faculty}</td>
-						<td class="center">${row.staff}</td>
-						<td class="center mono"><b>${row.total_employees}</b></td>
-					</tr>`).join("");
-
-				document.getElementById("hr-card-schooldata").innerHTML = `
-					<div class="hr-card-hd"><div class="hr-card-title">School-wise Headcount</div></div>
-					<table class="hr-tbl">
-						<thead><tr><th>School</th><th class="center">Teaching</th><th class="center">Non-Teaching</th><th class="center">Total</th></tr></thead>
-						<tbody>${tableRows}</tbody>
-					</table>`;
-
-				// Ratio table with manual student input
-				const ratioRows = data.map(row => `
-					<tr>
-						<td><b>${row.school}</b></td>
-						<td class="center">${row.faculty}</td>
-						<td class="center">${row.staff}</td>
-						<td>
-							<input class="hr-stu-input" type="number" min="0"
-								value="${this.student_counts[row.school] || ""}"
-								placeholder="0" data-school="${row.school}"
-								onchange="window._hrDash.update_student_count('${row.school}', this.value)" />
-						</td>
-						<td class="center mono">${row.faculty_ratio ? `1 : ${row.faculty_ratio}` : `<span style="color:var(--light)">—</span>`}</td>
-						<td class="center mono">${row.staff_ratio   ? `1 : ${row.staff_ratio}`   : `<span style="color:var(--light)">—</span>`}</td>
-					</tr>`).join("");
-
-				document.getElementById("hr-card-ratios").innerHTML = `
-					<div class="hr-card-hd">
-						<div class="hr-card-title">Faculty-Student & Staff-Student Ratio</div>
-						<small style="color:var(--muted);font-size:10px;">Enter student counts · SIS API integration pending</small>
-					</div>
-					<table class="hr-tbl">
-						<thead><tr><th>School</th><th class="center">Faculty</th><th class="center">Staff</th><th>Students</th><th class="center">Faculty Ratio</th><th class="center">Staff Ratio</th></tr></thead>
-						<tbody>${ratioRows}</tbody>
-					</table>
-					<div style="font-size:10px;color:var(--light);margin-top:10px;">Ratio = Students per Faculty/Staff member</div>`;
-			}
-		});
-	}
-
-	update_student_count(school, value) {
-		this.student_counts[school] = parseInt(value) || 0;
-		this.load_school_ratios();
-	}
-
-	// ── 8. RECENT MOVEMENTS ───────────────────────────────────────
+	// ── 7. RECENT MOVEMENTS ───────────────────────────────────────
 	load_recent_movements() {
 		frappe.call({
 			method: "custom_app.custom_app.page.hr_dashboard.hr_dashboard.get_recent_movements",
-			args: { company: this.filters.company, department: this.filters.department, school: this.filters.school },
+			args: {
+				company: this.filters.company,
+				department: this.filters.department,
+				...this._date_args()
+			},
 			callback: (r) => {
 				if (!r.message) return;
-				const colors = ["#2563eb","#7c3aed","#16a34a","#d97706","#dc2626"];
+				const colors = ["#2563eb", "#7c3aed", "#16a34a", "#d97706", "#dc2626"];
 
 				const render_list = (list, date_field) => list.map((emp, i) => {
-					const initials = (emp.employee_name || "?").split(" ").map(n => n[0]).slice(0,2).join("").toUpperCase();
+					const initials = (emp.employee_name || "?").split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase();
 					const color = colors[i % colors.length];
-					const date = emp[date_field] ? frappe.datetime.str_to_user(emp[date_field]) : "—";
+					const dt = emp[date_field] ? frappe.datetime.str_to_user(emp[date_field]) : "—";
 					return `<div class="hr-mv-item">
 						<div class="hr-mv-avatar" style="background:${color}18;color:${color};">${initials}</div>
 						<div class="hr-mv-info">
 							<div class="hr-mv-name">${emp.employee_name}</div>
-							<div class="hr-mv-meta">${emp.designation || "—"} · ${emp.custom_school || emp.department || "—"}</div>
+							<div class="hr-mv-meta">${emp.designation || "—"} · ${emp.department || "—"}</div>
 						</div>
-						<div class="hr-mv-date">${date}</div>
+						<div class="hr-mv-date">${dt}</div>
 					</div>`;
 				}).join("") || `<div style="color:var(--light);font-size:12px;padding:16px 0;text-align:center;">No records</div>`;
 

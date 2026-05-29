@@ -6,23 +6,21 @@ from datetime import date
 # ─────────────────────────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────────────────────────
-def _period_dates(period="month"):
+def _period_dates(period="month", date_from=None, date_to=None):
+	if period == "custom" and date_from and date_to:
+		return getdate(date_from), getdate(date_to)
 	today = getdate(nowdate())
 	if period == "month":
-		start = get_first_day(today)
-		end   = get_last_day(today)
+		return get_first_day(today), get_last_day(today)
 	elif period == "quarter":
 		qm    = ((today.month - 1) // 3) * 3 + 1
 		start = date(today.year, qm, 1)
-		end   = get_last_day(add_months(start, 2))
+		return start, get_last_day(add_months(start, 2))
 	else:  # year
-		start = date(today.year, 1, 1)
-		end   = date(today.year, 12, 31)
-	return start, end
+		return date(today.year, 1, 1), date(today.year, 12, 31)
 
 
-def _base_filters(company=None, department=None, school=None):
-	"""Return a dict of common WHERE clauses for Employee queries."""
+def _base_filters(company=None, department=None):
 	clauses, args = [], {}
 	if company:
 		clauses.append("e.company = %(company)s")
@@ -30,9 +28,6 @@ def _base_filters(company=None, department=None, school=None):
 	if department:
 		clauses.append("e.department = %(department)s")
 		args["department"] = department
-	if school:
-		clauses.append("e.custom_school = %(school)s")
-		args["school"] = school
 	return (" AND " + " AND ".join(clauses)) if clauses else "", args
 
 
@@ -41,19 +36,11 @@ def _base_filters(company=None, department=None, school=None):
 # ─────────────────────────────────────────────────────────────────
 @frappe.whitelist()
 def get_filter_options():
-	companies    = frappe.db.sql("SELECT name FROM `tabCompany` ORDER BY name", as_dict=True)
-	departments  = frappe.db.sql("SELECT name FROM `tabDepartment` ORDER BY name", as_dict=True)
-	schools      = frappe.db.sql(
-		"SELECT DISTINCT custom_school as name FROM `tabEmployee` "
-		"WHERE custom_school IS NOT NULL AND custom_school != '' ORDER BY custom_school",
-		as_dict=True
-	)
-	designations = frappe.db.sql("SELECT name FROM `tabDesignation` ORDER BY name", as_dict=True)
+	companies   = frappe.db.sql("SELECT name FROM `tabCompany` ORDER BY name", as_dict=True)
+	departments = frappe.db.sql("SELECT name FROM `tabDepartment` ORDER BY name", as_dict=True)
 	return {
-		"companies":    [r.name for r in companies],
-		"departments":  [r.name for r in departments],
-		"schools":      [r.name for r in schools],
-		"designations": [r.name for r in designations],
+		"companies":   [r.name for r in companies],
+		"departments": [r.name for r in departments],
 	}
 
 
@@ -61,31 +48,26 @@ def get_filter_options():
 # 1. ATTRITION RATE
 # ─────────────────────────────────────────────────────────────────
 @frappe.whitelist()
-def get_attrition_rate(period="month", company=None, department=None, school=None):
-	start, end = _period_dates(period)
-	extra_where, args = _base_filters(company, department, school)
-
-	# Replace 'e.' prefix since these queries use tabEmployee directly
-	ew = extra_where.replace("e.company", "company").replace("e.department", "department").replace("e.custom_school", "custom_school")
+def get_attrition_rate(period="month", company=None, department=None, date_from=None, date_to=None):
+	start, end = _period_dates(period, date_from, date_to)
+	extra_where, args = _base_filters(company, department)
+	ew = extra_where.replace("e.company", "company").replace("e.department", "department")
 
 	start_count = frappe.db.sql(f"""
 		SELECT COUNT(*) as cnt FROM `tabEmployee`
 		WHERE date_of_joining <= %(start)s
-		AND (relieving_date IS NULL OR relieving_date >= %(start)s)
-		AND status != 'Left' {ew}
+		AND (relieving_date IS NULL OR relieving_date >= %(start)s) {ew}
 	""", {**args, "start": start}, as_dict=True)[0].cnt or 0
 
 	end_count = frappe.db.sql(f"""
 		SELECT COUNT(*) as cnt FROM `tabEmployee`
 		WHERE date_of_joining <= %(end)s
-		AND (relieving_date IS NULL OR relieving_date >= %(end)s)
-		AND status != 'Left' {ew}
+		AND (relieving_date IS NULL OR relieving_date >= %(end)s) {ew}
 	""", {**args, "end": end}, as_dict=True)[0].cnt or 0
 
 	separations = frappe.db.sql(f"""
 		SELECT COUNT(*) as cnt FROM `tabEmployee`
-		WHERE status IN ('Left', 'Inactive')
-		AND relieving_date BETWEEN %(start)s AND %(end)s {ew}
+		WHERE relieving_date BETWEEN %(start)s AND %(end)s {ew}
 	""", {**args, "start": start, "end": end}, as_dict=True)[0].cnt or 0
 
 	missing_date = frappe.db.sql(f"""
@@ -97,15 +79,14 @@ def get_attrition_rate(period="month", company=None, department=None, school=Non
 	avg_headcount = (start_count + end_count) / 2 if (start_count + end_count) > 0 else 1
 	rate = round((separations / avg_headcount) * 100, 2)
 
-	# Monthly trend (last 6 months)
+	# Monthly trend (last 6 months — always shows rolling 6 months regardless of period)
 	trend = []
 	for i in range(5, -1, -1):
 		m_start = get_first_day(add_months(getdate(nowdate()), -i))
 		m_end   = get_last_day(m_start)
 		s = frappe.db.sql(f"""
 			SELECT COUNT(*) as cnt FROM `tabEmployee`
-			WHERE status IN ('Left','Inactive')
-			AND relieving_date BETWEEN %(ms)s AND %(me)s {ew}
+			WHERE relieving_date BETWEEN %(ms)s AND %(me)s {ew}
 		""", {**args, "ms": m_start, "me": m_end}, as_dict=True)[0].cnt or 0
 		trend.append({"label": m_start.strftime("%b %Y"), "value": s})
 
@@ -126,14 +107,12 @@ def get_attrition_rate(period="month", company=None, department=None, school=Non
 #    time_to_hire = Job Offer.offer_date - Job Opening.posted_on
 # ─────────────────────────────────────────────────────────────────
 @frappe.whitelist()
-def get_time_to_hire(company=None, department=None, school=None, date_from=None, date_to=None):
+def get_time_to_hire(company=None, department=None, date_from=None, date_to=None):
 	extra = []
 	args  = {}
 	if company:
 		extra.append("jo.company = %(company)s")
 		args["company"] = company
-	if department:
-		extra.append("jop.designation IN (SELECT name FROM `tabDesignation` WHERE name = %(dept_desg)s)")
 	if date_from:
 		extra.append("jof.offer_date >= %(date_from)s")
 		args["date_from"] = date_from
@@ -165,7 +144,7 @@ def get_time_to_hire(company=None, department=None, school=None, date_from=None,
 		{ew}
 	""", args, as_dict=True)
 
-	# Monthly trend
+	# Monthly trend (rolling 6 months)
 	trend = []
 	for i in range(5, -1, -1):
 		m_start = get_first_day(add_months(getdate(nowdate()), -i))
@@ -187,19 +166,20 @@ def get_time_to_hire(company=None, department=None, school=None, date_from=None,
 	excluded = frappe.db.sql("""
 		SELECT COUNT(*) as cnt FROM `tabEmployee`
 		WHERE (job_applicant IS NULL OR job_applicant = '')
-		AND status = 'Active'
+		AND date_of_joining <= CURDATE()
+		AND (relieving_date IS NULL OR relieving_date >= CURDATE())
 	""", as_dict=True)[0].cnt or 0
 
 	row = result[0] if result else {}
 	return {
-		"avg_days":         round(row.get("avg_days") or 0, 1),
-		"min_days":         row.get("min_days") or 0,
-		"max_days":         row.get("max_days") or 0,
-		"total_hires":      row.get("total_hires") or 0,
+		"avg_days":           round(row.get("avg_days") or 0, 1),
+		"min_days":           row.get("min_days") or 0,
+		"max_days":           row.get("max_days") or 0,
+		"total_hires":        row.get("total_hires") or 0,
 		"first_opening_date": str(row.get("first_opening_date") or ""),
-		"first_applicant":  row.get("first_applicant") or "—",
-		"excluded_count":   excluded,
-		"trend":            trend,
+		"first_applicant":    row.get("first_applicant") or "—",
+		"excluded_count":     excluded,
+		"trend":              trend,
 	}
 
 
@@ -246,7 +226,9 @@ def get_offer_acceptance(company=None, date_from=None, date_to=None):
 # 4. HEADCOUNT SUMMARY
 # ─────────────────────────────────────────────────────────────────
 @frappe.whitelist()
-def get_headcount_summary(company=None, department=None, school=None):
+def get_headcount_summary(period="month", company=None, department=None, date_from=None, date_to=None):
+	start, end = _period_dates(period, date_from, date_to)
+
 	ew, args = [], {}
 	if company:
 		ew.append("company = %(company)s")
@@ -254,49 +236,66 @@ def get_headcount_summary(company=None, department=None, school=None):
 	if department:
 		ew.append("department = %(department)s")
 		args["department"] = department
-	if school:
-		ew.append("custom_school = %(school)s")
-		args["school"] = school
 
 	where = (" AND " + " AND ".join(ew)) if ew else ""
 
-	total       = frappe.db.sql(f"SELECT COUNT(*) as c FROM `tabEmployee` WHERE status='Active' {where}", args, as_dict=True)[0].c or 0
-	teaching    = frappe.db.sql(f"SELECT COUNT(*) as c FROM `tabEmployee` WHERE status='Active' AND custom_type='Teaching' {where}", args, as_dict=True)[0].c or 0
-	non_teaching= frappe.db.sql(f"SELECT COUNT(*) as c FROM `tabEmployee` WHERE status='Active' AND custom_type='Non-Teaching' {where}", args, as_dict=True)[0].c or 0
-	unclassified= total - teaching - non_teaching
+	# Who was active during the selected period
+	period_filter = """
+		AND date_of_joining <= %(end)s
+		AND (relieving_date IS NULL OR relieving_date >= %(start)s)
+	"""
+	args["start"] = start
+	args["end"]   = end
 
-	school_data = frappe.db.sql(f"""
-		SELECT COALESCE(custom_school,'Unassigned') as school,
-			SUM(CASE WHEN custom_type='Teaching' THEN 1 ELSE 0 END) as teaching,
-			SUM(CASE WHEN custom_type='Non-Teaching' THEN 1 ELSE 0 END) as non_teaching,
-			COUNT(*) as total
-		FROM `tabEmployee` WHERE status='Active' {where}
-		GROUP BY custom_school ORDER BY total DESC
-	""", args, as_dict=True)
+	total = frappe.db.sql(f"""
+		SELECT COUNT(*) as c FROM `tabEmployee`
+		WHERE 1=1 {where} {period_filter}
+	""", args, as_dict=True)[0].c or 0
+
+	teaching = frappe.db.sql(f"""
+		SELECT COUNT(*) as c FROM `tabEmployee`
+		WHERE custom_type='Teaching' {where} {period_filter}
+	""", args, as_dict=True)[0].c or 0
+
+	non_teaching = frappe.db.sql(f"""
+		SELECT COUNT(*) as c FROM `tabEmployee`
+		WHERE custom_type='Non-Teaching' {where} {period_filter}
+	""", args, as_dict=True)[0].c or 0
+
+	unclassified = total - teaching - non_teaching
 
 	dept_data = frappe.db.sql(f"""
 		SELECT COALESCE(department,'Unassigned') as department, COUNT(*) as total
-		FROM `tabEmployee` WHERE status='Active' {where}
+		FROM `tabEmployee`
+		WHERE 1=1 {where} {period_filter}
 		GROUP BY department ORDER BY total DESC LIMIT 10
 	""", args, as_dict=True)
 
-	# Monthly joining trend last 6 months
+	# Monthly joining trend — rolling last 6 months (not affected by period filter)
+	join_args = {}
+	if company:
+		join_args["company"] = company
+	if department:
+		join_args["department"] = department
+	join_where = (" AND " + " AND ".join(ew)) if ew else ""
+
 	join_trend = []
 	for i in range(5, -1, -1):
 		m_start = get_first_day(add_months(getdate(nowdate()), -i))
 		m_end   = get_last_day(m_start)
 		c = frappe.db.sql(f"""
 			SELECT COUNT(*) as cnt FROM `tabEmployee`
-			WHERE date_of_joining BETWEEN %(ms)s AND %(me)s {where}
-		""", {**args, "ms": m_start, "me": m_end}, as_dict=True)[0].cnt or 0
+			WHERE date_of_joining BETWEEN %(ms)s AND %(me)s {join_where}
+		""", {**join_args, "ms": m_start, "me": m_end}, as_dict=True)[0].cnt or 0
 		join_trend.append({"label": m_start.strftime("%b %Y"), "value": c})
 
 	return {
 		"total": total, "teaching": teaching,
 		"non_teaching": non_teaching, "unclassified": unclassified,
 		"teaching_pct": round((teaching / total) * 100, 1) if total > 0 else 0,
-		"school_data": school_data, "dept_data": dept_data,
+		"dept_data": dept_data,
 		"join_trend": join_trend,
+		"period_label": f"{start.strftime('%d %b %Y')} – {end.strftime('%d %b %Y')}",
 	}
 
 
@@ -304,7 +303,7 @@ def get_headcount_summary(company=None, department=None, school=None):
 # 5. STAFFING PLAN vs ACTUALS
 # ─────────────────────────────────────────────────────────────────
 @frappe.whitelist()
-def get_staffing_vs_actuals(company=None, department=None):
+def get_staffing_vs_actuals(company=None, department=None, date_from=None, date_to=None):
 	ew, args = [], {}
 	if company:
 		ew.append("sp.company = %(company)s")
@@ -312,6 +311,15 @@ def get_staffing_vs_actuals(company=None, department=None):
 	if department:
 		ew.append("sp.department = %(department)s")
 		args["department"] = department
+
+	# If custom date range: show plans active during that range
+	# Otherwise: show currently active plans
+	if date_from and date_to:
+		ew.append("sp.from_date <= %(date_to)s AND sp.to_date >= %(date_from)s")
+		args["date_from"] = date_from
+		args["date_to"]   = date_to
+	else:
+		ew.append("sp.to_date >= CURDATE()")
 
 	where = (" AND " + " AND ".join(ew)) if ew else ""
 
@@ -322,7 +330,7 @@ def get_staffing_vs_actuals(company=None, department=None):
 			(spd.vacancies - COALESCE(spd.current_count,0)) as open_positions
 		FROM `tabStaffing Plan Detail` spd
 		JOIN `tabStaffing Plan` sp ON spd.parent = sp.name
-		WHERE sp.docstatus = 1 AND sp.to_date >= CURDATE() {where}
+		WHERE sp.docstatus = 1 {where}
 		ORDER BY spd.designation
 	""", args, as_dict=True)
 
@@ -331,11 +339,10 @@ def get_staffing_vs_actuals(company=None, department=None):
 
 # ─────────────────────────────────────────────────────────────────
 # 6. FULL RECRUITMENT FUNNEL
-#    Job Requisition → Job Opening → Job Applicant → Job Offer → Hired
 # ─────────────────────────────────────────────────────────────────
 @frappe.whitelist()
 def get_recruitment_pipeline(company=None, department=None, date_from=None, date_to=None):
-	# ── Requisition filters (single table, no alias needed)
+	# ── Requisition filters
 	req_ew, req_args = [], {}
 	if company:
 		req_ew.append("jreq.company = %(company)s")
@@ -351,7 +358,7 @@ def get_recruitment_pipeline(company=None, department=None, date_from=None, date
 		req_args["date_to"] = date_to
 	req_where = (" AND " + " AND ".join(req_ew)) if req_ew else ""
 
-	# ── Job Opening filters (prefixed jo.)
+	# ── Job Opening filters
 	jo_ew, jo_args = [], {}
 	if company:
 		jo_ew.append("jo.company = %(company)s")
@@ -367,7 +374,7 @@ def get_recruitment_pipeline(company=None, department=None, date_from=None, date
 		jo_args["date_to"] = date_to
 	jo_where = (" AND " + " AND ".join(jo_ew)) if jo_ew else ""
 
-	# ── Offer date filters (prefixed jof.)
+	# ── Offer date filters
 	jof_ew, jof_args = [], {}
 	if company:
 		jof_ew.append("jo.company = %(company)s")
@@ -383,21 +390,18 @@ def get_recruitment_pipeline(company=None, department=None, date_from=None, date
 		jof_args["date_to"] = date_to
 	jof_where = (" AND " + " AND ".join(jof_ew)) if jof_ew else ""
 
-	# Job Requisitions
 	req_statuses = frappe.db.sql(f"""
 		SELECT jreq.status, COUNT(*) as cnt FROM `tabJob Requisition` jreq
 		WHERE 1=1 {req_where} GROUP BY jreq.status
 	""", req_args, as_dict=True)
 	req_map = {r.status: r.cnt for r in req_statuses}
 
-	# Job Openings
 	jo_statuses = frappe.db.sql(f"""
 		SELECT jo.status, COUNT(*) as cnt FROM `tabJob Opening` jo
 		WHERE 1=1 {jo_where} GROUP BY jo.status
 	""", jo_args, as_dict=True)
 	jo_map = {r.status: r.cnt for r in jo_statuses}
 
-	# Job Applicants — join through job_title → Job Opening for company/dept filter
 	ja_statuses = frappe.db.sql(f"""
 		SELECT ja.status, COUNT(*) as cnt
 		FROM `tabJob Applicant` ja
@@ -407,7 +411,6 @@ def get_recruitment_pipeline(company=None, department=None, date_from=None, date
 	""", jo_args, as_dict=True)
 	ja_map = {r.status: r.cnt for r in ja_statuses}
 
-	# Job Offers — use jof_where which prefixes all columns correctly
 	jof_statuses = frappe.db.sql(f"""
 		SELECT jof.status, COUNT(*) as cnt
 		FROM `tabJob Offer` jof
@@ -418,7 +421,6 @@ def get_recruitment_pipeline(company=None, department=None, date_from=None, date
 	""", jof_args, as_dict=True)
 	jof_map = {r.status: r.cnt for r in jof_statuses}
 
-	# Hired (employees with applicant link, filtered by joining date)
 	hired_ew, hired_args = [], {}
 	if company:
 		hired_ew.append("e.company = %(company)s")
@@ -436,7 +438,6 @@ def get_recruitment_pipeline(company=None, department=None, date_from=None, date
 		WHERE e.job_applicant IS NOT NULL AND e.job_applicant != '' {hired_where}
 	""", hired_args, as_dict=True)[0].cnt or 0
 
-	# Requisition status breakdown for chart
 	req_chart = {
 		"Pending":         req_map.get("Pending", 0),
 		"Open & Approved": req_map.get("Open & Approved", 0),
@@ -482,7 +483,7 @@ def get_recruitment_pipeline(company=None, department=None, date_from=None, date
 # 7. RECENT MOVEMENTS
 # ─────────────────────────────────────────────────────────────────
 @frappe.whitelist()
-def get_recent_movements(company=None, department=None, school=None):
+def get_recent_movements(company=None, department=None, date_from=None, date_to=None):
 	ew, args = [], {}
 	if company:
 		ew.append("company = %(company)s")
@@ -490,69 +491,35 @@ def get_recent_movements(company=None, department=None, school=None):
 	if department:
 		ew.append("department = %(department)s")
 		args["department"] = department
-	if school:
-		ew.append("custom_school = %(school)s")
-		args["school"] = school
 
 	where = (" AND " + " AND ".join(ew)) if ew else ""
 
+	# Joiners: joined within date range (or most recent if no range)
+	if date_from and date_to:
+		joiner_filter = "AND date_of_joining BETWEEN %(date_from)s AND %(date_to)s"
+		args["date_from"] = date_from
+		args["date_to"]   = date_to
+	else:
+		joiner_filter = "AND date_of_joining <= CURDATE() AND (relieving_date IS NULL OR relieving_date >= CURDATE())"
+
 	joiners = frappe.db.sql(f"""
-		SELECT employee_name, designation, department, custom_school, date_of_joining
+		SELECT employee_name, designation, department, date_of_joining
 		FROM `tabEmployee`
-		WHERE status = 'Active' {where}
+		WHERE 1=1 {where} {joiner_filter}
 		ORDER BY date_of_joining DESC LIMIT 5
 	""", args, as_dict=True)
 
+	# Leavers: left within date range (or most recent if no range)
+	if date_from and date_to:
+		leaver_filter = "AND relieving_date BETWEEN %(date_from)s AND %(date_to)s"
+	else:
+		leaver_filter = "AND relieving_date IS NOT NULL"
+
 	leavers = frappe.db.sql(f"""
-		SELECT employee_name, designation, department, custom_school, relieving_date
+		SELECT employee_name, designation, department, relieving_date
 		FROM `tabEmployee`
-		WHERE status = 'Left' AND relieving_date IS NOT NULL {where}
+		WHERE 1=1 {where} {leaver_filter}
 		ORDER BY relieving_date DESC LIMIT 5
 	""", args, as_dict=True)
 
 	return {"joiners": joiners, "leavers": leavers}
-
-
-# ─────────────────────────────────────────────────────────────────
-# 8. FACULTY-STUDENT RATIO
-# ─────────────────────────────────────────────────────────────────
-@frappe.whitelist()
-def get_faculty_ratio(student_counts=None, company=None, school=None):
-	import json
-	if student_counts and isinstance(student_counts, str):
-		student_counts = json.loads(student_counts)
-	else:
-		student_counts = {}
-
-	ew, args = [], {}
-	if company:
-		ew.append("company = %(company)s")
-		args["company"] = company
-	if school:
-		ew.append("custom_school = %(school)s")
-		args["school"] = school
-
-	where = (" AND " + " AND ".join(ew)) if ew else ""
-
-	school_data = frappe.db.sql(f"""
-		SELECT COALESCE(custom_school,'Unassigned') as school,
-			SUM(CASE WHEN custom_type='Teaching' THEN 1 ELSE 0 END) as faculty,
-			SUM(CASE WHEN custom_type='Non-Teaching' THEN 1 ELSE 0 END) as staff,
-			COUNT(*) as total
-		FROM `tabEmployee`
-		WHERE status = 'Active' {where}
-		GROUP BY custom_school ORDER BY school
-	""", args, as_dict=True)
-
-	result = []
-	for row in school_data:
-		students     = student_counts.get(row.school, 0)
-		faculty_ratio= round(students / row.faculty, 1) if row.faculty > 0 and students > 0 else None
-		staff_ratio  = round(students / row.staff,   1) if row.staff   > 0 and students > 0 else None
-		result.append({
-			"school": row.school, "faculty": row.faculty,
-			"staff": row.staff, "total_employees": row.total,
-			"students": students,
-			"faculty_ratio": faculty_ratio, "staff_ratio": staff_ratio,
-		})
-	return result

@@ -4,7 +4,7 @@
  "docstatus": 0,
  "doctype": "Page",
  "idx": 0,
- "modified": "2026-05-28 17:13:56.740816",
+ "modified": "2026-05-29 13:51:33.136020",
  "modified_by": "Administrator",
  "module": "Custom App",
  "name": "hr-dashboard",
@@ -12,10 +12,7 @@
  "page_name": "hr-dashboard",
  "roles": [
   {
-   "role": "HR Manager"
-  },
-  {
-   "role": "HR User"
+   "role": "System Manager"
   }
  ],
  "script": null,
