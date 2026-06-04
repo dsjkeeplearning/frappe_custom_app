@@ -61,5 +61,14 @@
   "name": "Draft",
   "style": "",
   "workflow_state_name": "Draft"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2026-06-04 12:52:14.462697",
+  "name": "Approved by Manager",
+  "style": "Success",
+  "workflow_state_name": "Approved by Manager"
  }
 ]
