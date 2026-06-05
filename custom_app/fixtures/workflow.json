@@ -4,7 +4,7 @@
   "doctype": "Workflow",
   "document_type": "Material Request",
   "is_active": 1,
-  "modified": "2026-05-26 15:28:44.316179",
+  "modified": "2026-06-04 12:44:58.295266",
   "name": "Material Request 2 Step Verification",
   "override_status": 1,
   "send_email_alert": 0,
@@ -36,7 +36,7 @@
     "parentfield": "states",
     "parenttype": "Workflow",
     "send_email": 1,
-    "state": "Approved",
+    "state": "Approved by Manager",
     "update_field": null,
     "update_value": null,
     "workflow_builder_id": null
@@ -80,7 +80,7 @@
     "allow_self_approval": 0,
     "allowed": "Expense Approver",
     "condition": null,
-    "next_state": "Approved",
+    "next_state": "Approved by Manager",
     "parent": "Material Request 2 Step Verification",
     "parentfield": "transitions",
     "parenttype": "Workflow",
@@ -111,7 +111,7 @@
     "parentfield": "transitions",
     "parenttype": "Workflow",
     "send_email_to_creator": 0,
-    "state": "Approved",
+    "state": "Approved by Manager",
     "workflow_builder_id": null
    }
   ],
