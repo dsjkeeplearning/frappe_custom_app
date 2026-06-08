@@ -12,7 +12,7 @@ def material_request_permission_query(user):
     # Procurement User → all Approved
     if "Procurement User" in roles:
         conditions.append(
-            "`tabMaterial Request`.`workflow_state` = 'Approved'"
+            "`tabMaterial Request`.`workflow_state` = 'Approved by Manager'"
         )
 
     # Expense Approver → only assigned to him (User ID stored)
