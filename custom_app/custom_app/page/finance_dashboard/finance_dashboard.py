@@ -5,6 +5,86 @@ from datetime import date
 
 
 # ─────────────────────────────────────────────────────────────────
+# ROLE / PERMISSION HELPERS
+# ─────────────────────────────────────────────────────────────────
+
+def _is_system_manager():
+    """Return True if the current user has the System Manager role."""
+    return "System Manager" in frappe.get_roles(frappe.session.user)
+
+
+def _get_permitted_companies():
+    if _is_system_manager():
+        rows = frappe.db.sql("SELECT name FROM `tabCompany` ORDER BY name", as_dict=True)
+        return [r.name for r in rows]
+
+    from frappe.permissions import get_user_permissions
+    permitted = get_user_permissions(frappe.session.user).get("Company", [])
+    names = [p.get("doc") for p in permitted if p.get("doc")]
+
+    if not names:
+        return []
+
+    placeholders = ", ".join(["%s"] * len(names))
+    rows = frappe.db.sql(
+        f"SELECT name FROM `tabCompany` WHERE name IN ({placeholders}) ORDER BY name",
+        names, as_dict=True,
+    )
+    return [r.name for r in rows]
+
+def _enforce_company(company_arg):
+    """
+    Validate / override the company argument passed to a whitelisted method.
+
+    - System Manager: use whatever was passed (or None = all companies)
+    - Institution Head: ignore what was passed and force the permitted list.
+      If exactly one permitted company exists return that name; otherwise
+      return None (caller must add their own IN-clause guard).
+    """
+    if _is_system_manager():
+        return company_arg
+
+    permitted = _get_permitted_companies()
+    if not permitted:
+        return "__NONE__"          # sentinel: no data should be returned
+
+    if len(permitted) == 1:
+        return permitted[0]
+
+    # Multiple permitted companies — caller should use _get_permitted_companies()
+    # directly; return None here so callers that accept a single company fall back
+    # to filtering with the IN list.
+    return None
+
+
+def _company_where(alias="pi", company_arg=None):
+    """
+    Build a WHERE snippet + args dict for company filtering.
+
+    Returns (extra_sql, args_dict).
+    The snippet starts with ' AND …' so it can be appended directly.
+    """
+    if _is_system_manager():
+        if company_arg:
+            return f" AND {alias}.company = %(company)s", {"company": company_arg}
+        return "", {}
+
+    permitted = _get_permitted_companies()
+    if not permitted:
+        return " AND 1=0", {}          # block all rows
+
+    if company_arg and company_arg in permitted:
+        return f" AND {alias}.company = %(company)s", {"company": company_arg}
+
+    if len(permitted) == 1:
+        return f" AND {alias}.company = %(company)s", {"company": permitted[0]}
+
+    placeholders = ", ".join([f"%(co{i})s" for i in range(len(permitted))])
+    args = {f"co{i}": v for i, v in enumerate(permitted)}
+    return f" AND {alias}.company IN ({placeholders})", args
+
+
+# ─────────────────────────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────────────────────────
 
@@ -28,7 +108,8 @@ def _period_dates(period="month", date_from=None, date_to=None):
 
 @frappe.whitelist()
 def get_filter_options():
-    companies = frappe.db.sql("SELECT name FROM `tabCompany` ORDER BY name", as_dict=True)
+    companies = _get_permitted_companies()
+
     cost_centers = frappe.db.sql(
         "SELECT name FROM `tabCost Center` WHERE is_group = 0 ORDER BY name", as_dict=True
     )
@@ -37,11 +118,14 @@ def get_filter_options():
         as_dict=True,
     )
     suppliers = frappe.db.sql("SELECT name FROM `tabSupplier` ORDER BY name", as_dict=True)
+
     return {
-        "companies": [r.name for r in companies],
+        "companies": companies,
         "cost_centers": [r.name for r in cost_centers],
         "fiscal_years": [r.name for r in fiscal_years],
         "suppliers": [r.name for r in suppliers],
+        # Tell the frontend whether the company selector should be locked
+        "lock_company": not _is_system_manager(),
     }
 
 
@@ -53,10 +137,10 @@ def get_filter_options():
 def get_creditor_ageing(company=None, date_from=None, date_to=None, ageing_based_on="posting_date"):
     today = getdate(date_to) if date_to else getdate(nowdate())
 
-    ew, args = [], {"today": today}
-    if company:
-        ew.append("pi.company = %(company)s")
-        args["company"] = company
+    co_where, co_args = _company_where("pi", company)
+
+    ew, args = [], {**co_args, "today": today}
+
     if date_from:
         ew.append(f"pi.{ageing_based_on} >= %(date_from)s")
         args["date_from"] = date_from
@@ -64,7 +148,7 @@ def get_creditor_ageing(company=None, date_from=None, date_to=None, ageing_based
         ew.append(f"pi.{ageing_based_on} <= %(date_to)s")
         args["date_to"] = date_to
 
-    where = (" AND " + " AND ".join(ew)) if ew else ""
+    extra = (" AND " + " AND ".join(ew)) if ew else ""
 
     rows = frappe.db.sql(f"""
         SELECT
@@ -78,7 +162,8 @@ def get_creditor_ageing(company=None, date_from=None, date_to=None, ageing_based
         FROM `tabPurchase Invoice` pi
         WHERE pi.docstatus = 1
           AND pi.outstanding_amount > 0
-          {where}
+          {co_where}
+          {extra}
         ORDER BY age_days DESC
     """, args, as_dict=True)
 
@@ -128,20 +213,17 @@ def get_creditor_ageing(company=None, date_from=None, date_to=None, ageing_based
 
 
 # ─────────────────────────────────────────────────────────────────
-# 2. EXPENSE VS BUDGET  (from Budget Committed Actual Report)
+# 2. EXPENSE VS BUDGET
 # ─────────────────────────────────────────────────────────────────
 
 @frappe.whitelist()
 def get_expense_vs_budget(company=None, fiscal_year=None, cost_center=None):
-    """
-    Delegates to the Budget Committed Actual Report's execute() and
-    aggregates month-columns into per-account totals.
+    # Enforce permitted company
+    company = _enforce_company(company)
+    if company == "__NONE__":
+        return {"rows": [], "total_budget": 0, "total_actual": 0, "total_committed": 0,
+                "fiscal_year": fiscal_year}
 
-    Report columns pattern (per month in FY):
-        {mon}_budget   – allocated budget
-        {mon}_mr       – PR / EC raised (committed)
-        {mon}_actual   – Finance-Approved EC + submitted PI actual
-    """
     if not fiscal_year:
         fiscal_year = frappe.db.get_value(
             "Fiscal Year",
@@ -218,6 +300,11 @@ def get_expense_vs_budget(company=None, fiscal_year=None, cost_center=None):
 
 @frappe.whitelist()
 def get_non_budgeted_payments(company=None, fiscal_year=None, cost_center=None):
+    company = _enforce_company(company)
+    if company == "__NONE__":
+        return {"rows": [], "total_amount": 0, "total_count": 0,
+                "account_summary": [], "fiscal_year": fiscal_year}
+
     if not fiscal_year:
         fiscal_year = frappe.db.get_value(
             "Fiscal Year",
@@ -225,13 +312,15 @@ def get_non_budgeted_payments(company=None, fiscal_year=None, cost_center=None):
             "name",
         )
     if not fiscal_year:
-        return {"rows": [], "total_amount": 0}
+        return {"rows": [], "total_amount": 0, "total_count": 0,
+                "account_summary": [], "fiscal_year": None}
 
     fy_doc = frappe.get_doc("Fiscal Year", fiscal_year)
     fy_start = fy_doc.year_start_date
     fy_end = fy_doc.year_end_date
 
-    b_ew, b_args = ["b.fiscal_year = %(fiscal_year)s", "b.docstatus = 1"], {"fiscal_year": fiscal_year}
+    b_ew   = ["b.fiscal_year = %(fiscal_year)s", "b.docstatus = 1"]
+    b_args = {"fiscal_year": fiscal_year}
     if company:
         b_ew.append("b.company = %(company)s")
         b_args["company"] = company
@@ -340,6 +429,15 @@ def get_non_budgeted_payments(company=None, fiscal_year=None, cost_center=None):
 
 @frappe.whitelist()
 def get_vendor_concentration(company=None, fiscal_year=None, date_from=None, date_to=None, top_n=10):
+    company = _enforce_company(company)
+    if company == "__NONE__":
+        return {
+            "rows": [], "total_spend": 0, "top3_pct": 0, "top_n_pct": 0,
+            "top_n": int(top_n), "supplier_count": 0, "risk_level": "Low",
+            "chart_labels": [], "chart_values": [],
+            "date_from": date_from, "date_to": date_to,
+        }
+
     if fiscal_year and not (date_from and date_to):
         fy_doc = frappe.get_doc("Fiscal Year", fiscal_year)
         date_from = str(fy_doc.year_start_date)
@@ -350,13 +448,10 @@ def get_vendor_concentration(company=None, fiscal_year=None, date_from=None, dat
         date_from = str(date(today.year, 1, 1))
         date_to = str(today)
 
-    ew, args = ["pi.docstatus = 1", "pi.posting_date BETWEEN %(date_from)s AND %(date_to)s"], {
-        "date_from": date_from,
-        "date_to": date_to,
-    }
-    if company:
-        ew.append("pi.company = %(company)s")
-        args["company"] = company
+    co_where, co_args = _company_where("pi", company)
+
+    ew   = ["pi.docstatus = 1", "pi.posting_date BETWEEN %(date_from)s AND %(date_to)s"]
+    args = {**co_args, "date_from": date_from, "date_to": date_to}
 
     where = " AND ".join(ew)
 
@@ -367,7 +462,7 @@ def get_vendor_concentration(company=None, fiscal_year=None, date_from=None, dat
             SUM(pi.grand_total) AS total_spend,
             COUNT(pi.name) AS invoice_count
         FROM `tabPurchase Invoice` pi
-        WHERE {where}
+        WHERE {where} {co_where}
         GROUP BY pi.supplier
         ORDER BY total_spend DESC
     """, args, as_dict=True)

@@ -445,16 +445,43 @@ class HRDashboard {
 				callback: (r) => {
 					if (!r.message) { resolve(); return; }
 					const d = r.message;
-					["company", "department"].forEach((key, i) => {
-						const ids = ["hr-f-company", "hr-f-dept"];
-						const list = [d.companies, d.departments][i];
-						const sel = document.getElementById(ids[i]);
-						list.forEach(v => {
-							const o = document.createElement("option");
-							o.value = v; o.textContent = v;
-							sel.appendChild(o);
-						});
+	
+					// Populate departments normally
+					const deptSel = document.getElementById("hr-f-dept");
+					(d.departments || []).forEach(v => {
+						const o = document.createElement("option");
+						o.value = v; o.textContent = v;
+						deptSel.appendChild(o);
 					});
+	
+					// Populate companies
+					const companySel = document.getElementById("hr-f-company");
+					(d.companies || []).forEach(v => {
+						const o = document.createElement("option");
+						o.value = v; o.textContent = v;
+						companySel.appendChild(o);
+					});
+	
+					// ── ROLE-BASED COMPANY LOCK ──────────────────────────────
+					if (d.lock_company) {
+						if (d.companies.length === 1) {
+							companySel.value = d.companies[0];
+							this.filters.company = d.companies[0];
+						} else if (d.companies.length > 1) {
+							companySel.value = d.companies[0];
+							this.filters.company = d.companies[0];
+						} else {
+							companySel.value = "";
+							this.filters.company = "__NONE__";
+						}
+	
+						companySel.disabled = true;
+						companySel.title = "You can only view data for your assigned company";
+						companySel.style.opacity = "0.7";
+						companySel.style.cursor  = "not-allowed";
+					}
+					// ────────────────────────────────────────────────────────
+	
 					resolve();
 				}
 			});

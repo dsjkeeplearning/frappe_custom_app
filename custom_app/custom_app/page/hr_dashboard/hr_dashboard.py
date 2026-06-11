@@ -4,6 +4,52 @@ from datetime import date
 
 
 # ─────────────────────────────────────────────────────────────────
+# ROLE / PERMISSION HELPERS
+# ─────────────────────────────────────────────────────────────────
+
+def _is_system_manager():
+	return "System Manager" in frappe.get_roles(frappe.session.user)
+
+
+def _get_permitted_companies():
+    if _is_system_manager():
+        rows = frappe.db.sql(
+            "SELECT name FROM `tabCompany` ORDER BY name", as_dict=True
+        )
+        return [r.name for r in rows]
+
+    from frappe.permissions import get_user_permissions
+    permitted = get_user_permissions(frappe.session.user).get("Company", [])
+    names = [p.get("doc") for p in permitted if p.get("doc")]
+
+    if not names:
+        return []
+
+    placeholders = ", ".join(["%s"] * len(names))
+    rows = frappe.db.sql(
+        f"SELECT name FROM `tabCompany` WHERE name IN ({placeholders}) ORDER BY name",
+        names,
+        as_dict=True,
+    )
+    return [r.name for r in rows]
+
+
+def _resolve_company(company_arg):
+	"""
+	Returns the company to filter on.
+	- System Manager: returns company_arg as-is (None = all companies).
+	- Institution Head: ignores company_arg, returns first permitted company
+	  (or None if multiple permitted, or '__NONE__' if none permitted).
+	"""
+	if _is_system_manager():
+		return company_arg
+	permitted = _get_permitted_companies()
+	if not permitted:
+		return "__NONE__"
+	return permitted[0]
+
+
+# ─────────────────────────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────────────────────────
 def _period_dates(period="month", date_from=None, date_to=None):
@@ -36,11 +82,12 @@ def _base_filters(company=None, department=None):
 # ─────────────────────────────────────────────────────────────────
 @frappe.whitelist()
 def get_filter_options():
-	companies   = frappe.db.sql("SELECT name FROM `tabCompany` ORDER BY name", as_dict=True)
+	companies   = _get_permitted_companies()
 	departments = frappe.db.sql("SELECT name FROM `tabDepartment` ORDER BY name", as_dict=True)
 	return {
-		"companies":   [r.name for r in companies],
+		"companies":   companies,
 		"departments": [r.name for r in departments],
+		"lock_company": not _is_system_manager(),
 	}
 
 
@@ -50,7 +97,7 @@ def get_filter_options():
 @frappe.whitelist()
 def get_attrition_rate(period="month", company=None, department=None, date_from=None, date_to=None):
 	start, end = _period_dates(period, date_from, date_to)
-	extra_where, args = _base_filters(company, department)
+	extra_where, args = _base_filters(_resolve_company(company), department)
 	ew = extra_where.replace("e.company", "company").replace("e.department", "department")
 
 	start_count = frappe.db.sql(f"""
@@ -110,9 +157,13 @@ def get_attrition_rate(period="month", company=None, department=None, date_from=
 def get_time_to_hire(company=None, department=None, date_from=None, date_to=None):
 	extra = []
 	args  = {}
-	if company:
+	resolved = _resolve_company(company)
+	if resolved == "__NONE__":
+		return {"avg_days": 0, "min_days": 0, "max_days": 0, "total_hires": 0,
+				"first_opening_date": "", "first_applicant": "—", "excluded_count": 0, "trend": []}
+	if resolved:
 		extra.append("jo.company = %(company)s")
-		args["company"] = company
+		args["company"] = resolved
 	if date_from:
 		extra.append("jof.offer_date >= %(date_from)s")
 		args["date_from"] = date_from
@@ -189,9 +240,13 @@ def get_time_to_hire(company=None, department=None, date_from=None, date_to=None
 @frappe.whitelist()
 def get_offer_acceptance(company=None, date_from=None, date_to=None):
 	ew, args = [], {}
-	if company:
+	resolved = _resolve_company(company)
+	if resolved == "__NONE__":
+		return {"rate": 0, "accepted": 0, "rejected": 0, "awaiting": 0,
+				"total": 0, "chart_data": [0, 0, 0]}
+	if resolved:
 		ew.append("company = %(company)s")
-		args["company"] = company
+		args["company"] = resolved
 	if date_from:
 		ew.append("offer_date >= %(date_from)s")
 		args["date_from"] = date_from
@@ -229,10 +284,15 @@ def get_offer_acceptance(company=None, date_from=None, date_to=None):
 def get_headcount_summary(period="month", company=None, department=None, date_from=None, date_to=None):
 	start, end = _period_dates(period, date_from, date_to)
 
+	resolved = _resolve_company(company)
+	if resolved == "__NONE__":
+		return {"total": 0, "teaching": 0, "non_teaching": 0, "unclassified": 0,
+				"teaching_pct": 0, "dept_data": [], "join_trend": [], "period_label": ""}
+
 	ew, args = [], {}
-	if company:
+	if resolved:
 		ew.append("company = %(company)s")
-		args["company"] = company
+		args["company"] = resolved
 	if department:
 		ew.append("department = %(department)s")
 		args["department"] = department
@@ -273,8 +333,8 @@ def get_headcount_summary(period="month", company=None, department=None, date_fr
 
 	# Monthly joining trend — rolling last 6 months (not affected by period filter)
 	join_args = {}
-	if company:
-		join_args["company"] = company
+	if resolved:
+		join_args["company"] = resolved
 	if department:
 		join_args["department"] = department
 	join_where = (" AND " + " AND ".join(ew)) if ew else ""
@@ -304,10 +364,14 @@ def get_headcount_summary(period="month", company=None, department=None, date_fr
 # ─────────────────────────────────────────────────────────────────
 @frappe.whitelist()
 def get_staffing_vs_actuals(company=None, department=None, date_from=None, date_to=None):
+	resolved = _resolve_company(company)
+	if resolved == "__NONE__":
+		return {"data": [], "total_rows": 0}
+
 	ew, args = [], {}
-	if company:
+	if resolved:
 		ew.append("sp.company = %(company)s")
-		args["company"] = company
+		args["company"] = resolved
 	if department:
 		ew.append("sp.department = %(department)s")
 		args["department"] = department
@@ -342,11 +406,18 @@ def get_staffing_vs_actuals(company=None, department=None, date_from=None, date_
 # ─────────────────────────────────────────────────────────────────
 @frappe.whitelist()
 def get_recruitment_pipeline(company=None, department=None, date_from=None, date_to=None):
+	resolved = _resolve_company(company)
+	if resolved == "__NONE__":
+		empty = {"total": 0, "pending": 0, "approved": 0, "filled": 0, "rejected": 0, "by_status": {}}
+		return {"requisitions": empty, "openings": {"total": 0, "open": 0, "closed": 0},
+				"applicants": {"total": 0, "open": 0, "replied": 0, "hold": 0, "accepted": 0, "rejected": 0},
+				"offers": {"sent": 0, "accepted": 0, "rejected": 0, "awaiting": 0}, "hired": 0}
+
 	# ── Requisition filters
 	req_ew, req_args = [], {}
-	if company:
+	if resolved:
 		req_ew.append("jreq.company = %(company)s")
-		req_args["company"] = company
+		req_args["company"] = resolved
 	if department:
 		req_ew.append("jreq.department = %(department)s")
 		req_args["department"] = department
@@ -360,9 +431,9 @@ def get_recruitment_pipeline(company=None, department=None, date_from=None, date
 
 	# ── Job Opening filters
 	jo_ew, jo_args = [], {}
-	if company:
+	if resolved:
 		jo_ew.append("jo.company = %(company)s")
-		jo_args["company"] = company
+		jo_args["company"] = resolved
 	if department:
 		jo_ew.append("jo.department = %(department)s")
 		jo_args["department"] = department
@@ -376,9 +447,9 @@ def get_recruitment_pipeline(company=None, department=None, date_from=None, date
 
 	# ── Offer date filters
 	jof_ew, jof_args = [], {}
-	if company:
+	if resolved:
 		jof_ew.append("jo.company = %(company)s")
-		jof_args["company"] = company
+		jof_args["company"] = resolved
 	if department:
 		jof_ew.append("jo.department = %(department)s")
 		jof_args["department"] = department
@@ -422,9 +493,9 @@ def get_recruitment_pipeline(company=None, department=None, date_from=None, date
 	jof_map = {r.status: r.cnt for r in jof_statuses}
 
 	hired_ew, hired_args = [], {}
-	if company:
+	if resolved:
 		hired_ew.append("e.company = %(company)s")
-		hired_args["company"] = company
+		hired_args["company"] = resolved
 	if date_from:
 		hired_ew.append("e.date_of_joining >= %(date_from)s")
 		hired_args["date_from"] = date_from
@@ -484,10 +555,14 @@ def get_recruitment_pipeline(company=None, department=None, date_from=None, date
 # ─────────────────────────────────────────────────────────────────
 @frappe.whitelist()
 def get_recent_movements(company=None, department=None, date_from=None, date_to=None):
+	resolved = _resolve_company(company)
+	if resolved == "__NONE__":
+		return {"joiners": [], "leavers": []}
+
 	ew, args = [], {}
-	if company:
+	if resolved:
 		ew.append("company = %(company)s")
-		args["company"] = company
+		args["company"] = resolved
 	if department:
 		ew.append("department = %(department)s")
 		args["department"] = department
