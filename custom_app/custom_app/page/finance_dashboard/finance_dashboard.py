@@ -51,11 +51,6 @@ def get_filter_options():
 
 @frappe.whitelist()
 def get_creditor_ageing(company=None, date_from=None, date_to=None, ageing_based_on="posting_date"):
-    """
-    Returns outstanding supplier balances bucketed into ageing intervals:
-    0-30, 31-60, 61-90, 91-120, 120+ days overdue.
-    Uses Purchase Invoice as the source of truth.
-    """
     today = getdate(date_to) if date_to else getdate(nowdate())
 
     ew, args = [], {"today": today}
@@ -133,104 +128,19 @@ def get_creditor_ageing(company=None, date_from=None, date_to=None, ageing_based
 
 
 # ─────────────────────────────────────────────────────────────────
-# 2. COLLECTION EFFICIENCY (Accounts Receivable)
-# ─────────────────────────────────────────────────────────────────
-
-@frappe.whitelist()
-def get_collection_efficiency(company=None, period="month", date_from=None, date_to=None):
-    """
-    Collection Efficiency = (Amount Collected in Period / Total Billed in Period) * 100
-    Also provides DSO (Days Sales Outstanding).
-    """
-    start, end = _period_dates(period, date_from, date_to)
-
-    ew, args = [], {"start": start, "end": end}
-    if company:
-        ew.append("company = %(company)s")
-        args["company"] = company
-    where = (" AND " + " AND ".join(ew)) if ew else ""
-
-    # Total invoiced in period
-    billed = frappe.db.sql(f"""
-        SELECT COALESCE(SUM(grand_total), 0) AS total
-        FROM `tabSales Invoice`
-        WHERE docstatus = 1
-          AND posting_date BETWEEN %(start)s AND %(end)s
-          {where}
-    """, args, as_dict=True)[0].total or 0
-
-    # Total collected (Payment Entries against Sales Invoices)
-    collected = frappe.db.sql(f"""
-        SELECT COALESCE(SUM(pe.paid_amount), 0) AS total
-        FROM `tabPayment Entry` pe
-        WHERE pe.docstatus = 1
-          AND pe.payment_type = 'Receive'
-          AND pe.posting_date BETWEEN %(start)s AND %(end)s
-          {where}
-    """, args, as_dict=True)[0].total or 0
-
-    # Outstanding receivables (all unpaid)
-    outstanding = frappe.db.sql(f"""
-        SELECT COALESCE(SUM(outstanding_amount), 0) AS total
-        FROM `tabSales Invoice`
-        WHERE docstatus = 1
-          AND outstanding_amount > 0
-          {where}
-    """, args, as_dict=True)[0].total or 0
-
-    # Overdue (past due date)
-    overdue = frappe.db.sql(f"""
-        SELECT COALESCE(SUM(outstanding_amount), 0) AS total
-        FROM `tabSales Invoice`
-        WHERE docstatus = 1
-          AND outstanding_amount > 0
-          AND due_date < %(today)s
-          {where}
-    """, {**args, "today": getdate(nowdate())}, as_dict=True)[0].total or 0
-
-    efficiency = round((collected / billed) * 100, 2) if billed > 0 else 0
-
-    # Monthly trend (rolling 6 months)
-    trend = []
-    for i in range(5, -1, -1):
-        m_start = get_first_day(add_months(getdate(nowdate()), -i))
-        m_end = get_last_day(m_start)
-        t_args = {**args, "ms": m_start, "me": m_end}
-
-        t_billed = frappe.db.sql(f"""
-            SELECT COALESCE(SUM(grand_total), 0) AS total FROM `tabSales Invoice`
-            WHERE docstatus = 1 AND posting_date BETWEEN %(ms)s AND %(me)s {where}
-        """, t_args, as_dict=True)[0].total or 0
-
-        t_collected = frappe.db.sql(f"""
-            SELECT COALESCE(SUM(paid_amount), 0) AS total FROM `tabPayment Entry`
-            WHERE docstatus = 1 AND payment_type = 'Receive'
-              AND posting_date BETWEEN %(ms)s AND %(me)s {where}
-        """, t_args, as_dict=True)[0].total or 0
-
-        eff = round((t_collected / t_billed) * 100, 2) if t_billed > 0 else 0
-        trend.append({"label": m_start.strftime("%b %Y"), "value": eff, "billed": t_billed, "collected": t_collected})
-
-    return {
-        "efficiency": efficiency,
-        "billed": round(billed, 2),
-        "collected": round(collected, 2),
-        "outstanding": round(outstanding, 2),
-        "overdue": round(overdue, 2),
-        "trend": trend,
-        "period_label": f"{start.strftime('%d %b %Y')} – {end.strftime('%d %b %Y')}",
-    }
-
-
-# ─────────────────────────────────────────────────────────────────
-# 3. EXPENSE VS BUDGET
+# 2. EXPENSE VS BUDGET  (from Budget Committed Actual Report)
 # ─────────────────────────────────────────────────────────────────
 
 @frappe.whitelist()
 def get_expense_vs_budget(company=None, fiscal_year=None, cost_center=None):
     """
-    Returns budget vs actual spend per account for the given fiscal year / cost centre.
-    Actual = Finance-Approved Expense Claims + Submitted Purchase Invoices.
+    Delegates to the Budget Committed Actual Report's execute() and
+    aggregates month-columns into per-account totals.
+
+    Report columns pattern (per month in FY):
+        {mon}_budget   – allocated budget
+        {mon}_mr       – PR / EC raised (committed)
+        {mon}_actual   – Finance-Approved EC + submitted PI actual
     """
     if not fiscal_year:
         fiscal_year = frappe.db.get_value(
@@ -239,101 +149,55 @@ def get_expense_vs_budget(company=None, fiscal_year=None, cost_center=None):
             "name",
         )
     if not fiscal_year:
-        return {"rows": [], "total_budget": 0, "total_actual": 0, "fiscal_year": None}
+        return {"rows": [], "total_budget": 0, "total_actual": 0, "total_committed": 0,
+                "fiscal_year": None}
 
-    fy_doc = frappe.get_doc("Fiscal Year", fiscal_year)
-    fy_start = fy_doc.year_start_date
-    fy_end = fy_doc.year_end_date
+    filters = frappe._dict(
+        company=company or frappe.defaults.get_user_default("Company"),
+        fiscal_year=fiscal_year,
+        cost_center=cost_center or None,
+    )
 
-    # --- Budget ---
-    b_ew, b_args = ["b.fiscal_year = %(fiscal_year)s", "b.docstatus = 1"], {"fiscal_year": fiscal_year}
-    if company:
-        b_ew.append("b.company = %(company)s")
-        b_args["company"] = company
-    if cost_center:
-        b_ew.append("b.cost_center = %(cost_center)s")
-        b_args["cost_center"] = cost_center
+    # Import and run the report directly
+    from custom_app.custom_app.report.budget_committed_actual_report.budget_committed_actual_report import execute
+    columns, data = execute(filters)
 
-    budgets = frappe.db.sql(f"""
-        SELECT ba.account, SUM(ba.budget_amount) AS budget_amount
-        FROM `tabBudget Account` ba
-        JOIN `tabBudget` b ON ba.parent = b.name
-        WHERE {" AND ".join(b_ew)}
-        GROUP BY ba.account
-        ORDER BY ba.account
-    """, b_args, as_dict=True)
-
-    account_list = [r.account for r in budgets]
-    if not account_list:
-        return {"rows": [], "total_budget": 0, "total_actual": 0, "fiscal_year": fiscal_year}
-
-    budget_map = {r.account: flt(r.budget_amount) for r in budgets}
-
-    # --- Actual: Expense Claims (Finance Approved) ---
-    ec_ew = [
-        "ec.docstatus = 1",
-        "ec.workflow_state = 'Finance Approved'",
-        f"ec.posting_date BETWEEN %(fy_start)s AND %(fy_end)s",
-        "ecd.default_account IN %(accounts)s",
-    ]
-    ec_args = {"fy_start": fy_start, "fy_end": fy_end, "accounts": account_list}
-    if company:
-        ec_ew.append("ec.company = %(company)s")
-        ec_args["company"] = company
-    if cost_center:
-        ec_ew.append("ecd.cost_center = %(cost_center)s")
-        ec_args["cost_center"] = cost_center
-
-    ec_actual = frappe.db.sql(f"""
-        SELECT ecd.default_account AS account, SUM(ecd.amount) AS total
-        FROM `tabExpense Claim Detail` ecd
-        JOIN `tabExpense Claim` ec ON ec.name = ecd.parent
-        WHERE {" AND ".join(ec_ew)}
-        GROUP BY ecd.default_account
-    """, ec_args, as_dict=True)
-    ec_map = {r.account: flt(r.total) for r in ec_actual}
-
-    # --- Actual: Purchase Invoices (Submitted) ---
-    pi_ew = [
-        "pi.docstatus = 1",
-        f"pi.posting_date BETWEEN %(fy_start)s AND %(fy_end)s",
-        "pii.expense_account IN %(accounts)s",
-    ]
-    pi_args = {"fy_start": fy_start, "fy_end": fy_end, "accounts": account_list}
-    if company:
-        pi_ew.append("pi.company = %(company)s")
-        pi_args["company"] = company
-    if cost_center:
-        pi_ew.append("pii.cost_center = %(cost_center)s")
-        pi_args["cost_center"] = cost_center
-
-    pi_actual = frappe.db.sql(f"""
-        SELECT pii.expense_account AS account, SUM(pii.base_net_amount) AS total
-        FROM `tabPurchase Invoice Item` pii
-        JOIN `tabPurchase Invoice` pi ON pi.name = pii.parent
-        WHERE {" AND ".join(pi_ew)}
-        GROUP BY pii.expense_account
-    """, pi_args, as_dict=True)
-    pi_map = {r.account: flt(r.total) for r in pi_actual}
+    # Determine which fieldnames belong to budget / mr / actual
+    budget_fields, mr_fields, actual_fields = [], [], []
+    for col in columns:
+        fn = col.get("fieldname", "")
+        if fn.endswith("_budget"):
+            budget_fields.append(fn)
+        elif fn.endswith("_mr"):
+            mr_fields.append(fn)
+        elif fn.endswith("_actual"):
+            actual_fields.append(fn)
 
     rows = []
-    total_budget = 0
-    total_actual = 0
+    total_budget = total_actual = total_committed = 0
 
-    for account in account_list:
-        budget = budget_map.get(account, 0)
-        actual = ec_map.get(account, 0) + pi_map.get(account, 0)
-        utilisation = round((actual / budget) * 100, 1) if budget > 0 else 0
+    for row in data:
+        account = row.get("account") or row.get("Account") or ""
+        if not account:
+            continue
+
+        budget  = sum(flt(row.get(f, 0)) for f in budget_fields)
+        committed = sum(flt(row.get(f, 0)) for f in mr_fields)
+        actual  = sum(flt(row.get(f, 0)) for f in actual_fields)
         variance = budget - actual
+        utilisation = round((actual / budget) * 100, 1) if budget > 0 else 0
+
         rows.append({
             "account": account,
             "budget": round(budget, 2),
+            "committed": round(committed, 2),
             "actual": round(actual, 2),
             "variance": round(variance, 2),
             "utilisation_pct": utilisation,
         })
-        total_budget += budget
-        total_actual += actual
+        total_budget    += budget
+        total_actual    += actual
+        total_committed += committed
 
     rows.sort(key=lambda x: x["utilisation_pct"], reverse=True)
 
@@ -341,6 +205,7 @@ def get_expense_vs_budget(company=None, fiscal_year=None, cost_center=None):
         "rows": rows,
         "total_budget": round(total_budget, 2),
         "total_actual": round(total_actual, 2),
+        "total_committed": round(total_committed, 2),
         "total_variance": round(total_budget - total_actual, 2),
         "total_utilisation": round((total_actual / total_budget) * 100, 1) if total_budget > 0 else 0,
         "fiscal_year": fiscal_year,
@@ -348,15 +213,11 @@ def get_expense_vs_budget(company=None, fiscal_year=None, cost_center=None):
 
 
 # ─────────────────────────────────────────────────────────────────
-# 4. NON-BUDGETED PAYMENTS
+# 3. NON-BUDGETED PAYMENTS
 # ─────────────────────────────────────────────────────────────────
 
 @frappe.whitelist()
 def get_non_budgeted_payments(company=None, fiscal_year=None, cost_center=None):
-    """
-    Finds Purchase Invoices and Expense Claims whose expense account
-    has NO active Budget for the current fiscal year + cost centre.
-    """
     if not fiscal_year:
         fiscal_year = frappe.db.get_value(
             "Fiscal Year",
@@ -370,7 +231,6 @@ def get_non_budgeted_payments(company=None, fiscal_year=None, cost_center=None):
     fy_start = fy_doc.year_start_date
     fy_end = fy_doc.year_end_date
 
-    # Get ALL budgeted accounts for this fiscal year
     b_ew, b_args = ["b.fiscal_year = %(fiscal_year)s", "b.docstatus = 1"], {"fiscal_year": fiscal_year}
     if company:
         b_ew.append("b.company = %(company)s")
@@ -390,7 +250,7 @@ def get_non_budgeted_payments(company=None, fiscal_year=None, cost_center=None):
 
     rows = []
 
-    # --- Purchase Invoices ---
+    # Purchase Invoices
     pi_ew = ["pi.docstatus = 1", "pi.posting_date BETWEEN %(fy_start)s AND %(fy_end)s"]
     pi_args = {"fy_start": fy_start, "fy_end": fy_end}
     if company:
@@ -419,7 +279,7 @@ def get_non_budgeted_payments(company=None, fiscal_year=None, cost_center=None):
         if r.account not in budgeted_set:
             rows.append(r)
 
-    # --- Expense Claims (Finance Approved) ---
+    # Expense Claims (Finance Approved)
     ec_ew = [
         "ec.docstatus = 1",
         "ec.workflow_state = 'Finance Approved'",
@@ -456,7 +316,6 @@ def get_non_budgeted_payments(company=None, fiscal_year=None, cost_center=None):
 
     total_amount = sum(flt(r.amount) for r in rows)
 
-    # Summary by account
     account_summary = {}
     for r in rows:
         a = r.account or "Unknown"
@@ -467,7 +326,7 @@ def get_non_budgeted_payments(company=None, fiscal_year=None, cost_center=None):
     account_summary_list = sorted(account_summary.values(), key=lambda x: x["amount"], reverse=True)
 
     return {
-        "rows": rows[:50],  # cap for table display
+        "rows": rows[:50],
         "total_amount": round(total_amount, 2),
         "total_count": len(rows),
         "account_summary": account_summary_list,
@@ -476,15 +335,11 @@ def get_non_budgeted_payments(company=None, fiscal_year=None, cost_center=None):
 
 
 # ─────────────────────────────────────────────────────────────────
-# 5. VENDOR CONCENTRATION RISK
+# 4. VENDOR CONCENTRATION RISK
 # ─────────────────────────────────────────────────────────────────
 
 @frappe.whitelist()
 def get_vendor_concentration(company=None, fiscal_year=None, date_from=None, date_to=None, top_n=10):
-    """
-    Vendor Concentration Ratio = (Spend with Top N Vendors / Total Procurement Spend) * 100
-    HIGH RISK threshold: top 3 vendors > 40% of total spend.
-    """
     if fiscal_year and not (date_from and date_to):
         fy_doc = frappe.get_doc("Fiscal Year", fiscal_year)
         date_from = str(fy_doc.year_start_date)
@@ -505,7 +360,6 @@ def get_vendor_concentration(company=None, fiscal_year=None, date_from=None, dat
 
     where = " AND ".join(ew)
 
-    # Per-supplier spend
     supplier_spend = frappe.db.sql(f"""
         SELECT
             pi.supplier,
@@ -543,7 +397,6 @@ def get_vendor_concentration(company=None, fiscal_year=None, date_from=None, dat
 
     risk_level = "High" if top3_pct > 40 else ("Medium" if top3_pct > 25 else "Low")
 
-    # Chart data: top 10 + Others
     chart_labels, chart_values = [], []
     for r in rows[:top_n]:
         chart_labels.append(r["supplier_name"])
