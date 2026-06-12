@@ -528,19 +528,54 @@ class FinanceDashboard {
 				callback: (r) => {
 					if (!r.message) { resolve(); return; }
 					const d = r.message;
+	
 					[["fin-f-company", d.companies], ["fin-f-cc", d.cost_centers], ["fin-f-fy", d.fiscal_years]].forEach(([id, list]) => {
 						const sel = document.getElementById(id);
-						(list || []).forEach((v) => { const o = document.createElement("option"); o.value = v; o.textContent = v; sel.appendChild(o); });
+						(list || []).forEach((v) => {
+							const o = document.createElement("option");
+							o.value = v; o.textContent = v;
+							sel.appendChild(o);
+						});
 					});
-					if (d.fiscal_years?.length && !this.filters.fiscal_year) {
-						this.filters.fiscal_year = d.fiscal_years[0];
-						document.getElementById("fin-f-fy").value = d.fiscal_years[0];
+	
+					// ── ROLE-BASED COMPANY LOCK ──────────────────────────────
+					if (d.lock_company) {
+						const sel = document.getElementById("fin-f-company");
+	
+						if (d.companies.length === 1) {
+							// Single permitted company — auto-select and lock
+							sel.value = d.companies[0];
+							this.filters.company = d.companies[0];
+						} else if (d.companies.length > 1) {
+							// Multiple permitted companies — pre-select first but keep enabled
+							sel.value = d.companies[0];
+							this.filters.company = d.companies[0];
+						} else {
+							// No permitted companies at all
+							sel.value = "";
+							this.filters.company = "__NONE__";
+						}
+	
+						// Disable the dropdown so the user cannot switch companies
+						sel.disabled = true;
+						sel.title = "You can only view data for your assigned company";
+						sel.style.opacity = "0.7";
+						sel.style.cursor  = "not-allowed";
+					} else {
+						// System Manager — use URL param or default to first FY
+						if (d.fiscal_years?.length && !this.filters.fiscal_year) {
+							this.filters.fiscal_year = d.fiscal_years[0];
+							document.getElementById("fin-f-fy").value = d.fiscal_years[0];
+						}
 					}
+					// ────────────────────────────────────────────────────────
+	
 					resolve();
 				},
 			});
 		});
 	}
+ 
 
 	// ─────────────────────────────────────────────────────────────
 	// LOAD ALL
