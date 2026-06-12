@@ -2618,7 +2618,7 @@
  },
  {
   "charts": [],
-  "content": "[{\"id\":\"AbquEOPBhB\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Budgeting</span>\",\"col\":12}},{\"id\":\"agUXa_0-_F\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Budget\",\"col\":3}},{\"id\":\"gKSA23Jys5\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Upload Budget\",\"col\":3}},{\"id\":\"hXxynA3dJY\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Budget Reallocation\",\"col\":3}},{\"id\":\"45GrWoLtaA\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Download Budget Excel Format\",\"col\":3}},{\"id\":\"NNYGdhpR8f\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"WDtFFTSbCQ\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports</b></span>\",\"col\":12}},{\"id\":\"AFkm0KVNoh\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Budget Variance\",\"col\":3}},{\"id\":\"jUbZh3B9OH\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Budget Committed Actual\",\"col\":3}},{\"id\":\"Xi-Ij81zGU\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Budget Version History\",\"col\":3}},{\"id\":\"ZObydMPJBI\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Institution Budget\",\"col\":3}},{\"id\":\"rFpaj1agwt\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Payment Register\",\"col\":3}},{\"id\":\"YIUoVgXAum\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Procurement Tracker\",\"col\":3}}]",
+  "content": "[{\"id\":\"AbquEOPBhB\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Budgeting</span>\",\"col\":12}},{\"id\":\"agUXa_0-_F\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Budget\",\"col\":3}},{\"id\":\"gKSA23Jys5\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Upload Budget\",\"col\":3}},{\"id\":\"hXxynA3dJY\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Budget Reallocation\",\"col\":3}},{\"id\":\"45GrWoLtaA\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Download Budget Excel Format\",\"col\":3}},{\"id\":\"NNYGdhpR8f\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"WDtFFTSbCQ\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports</b></span>\",\"col\":12}},{\"id\":\"AFkm0KVNoh\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Budget Variance\",\"col\":3}},{\"id\":\"jUbZh3B9OH\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Budget Committed Actual\",\"col\":3}},{\"id\":\"Xi-Ij81zGU\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Budget Version History\",\"col\":3}},{\"id\":\"ZObydMPJBI\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Institution Budget\",\"col\":3}},{\"id\":\"rFpaj1agwt\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Payment Register\",\"col\":3}},{\"id\":\"YIUoVgXAum\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Procurement Tracker\",\"col\":3}},{\"id\":\"Lg6iXWw_9v\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"Mqm_dOPb5c\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Dashboard</b></span>\",\"col\":12}},{\"id\":\"Z8AWYYJZzk\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Finance Dashboard\",\"col\":3}}]",
   "custom_blocks": [],
   "docstatus": 0,
   "doctype": "Workspace",
@@ -2629,7 +2629,7 @@
   "is_hidden": 0,
   "label": "Budgeting",
   "links": [],
-  "modified": "2026-05-25 11:37:48.759954",
+  "modified": "2026-06-12 00:57:30.184195",
   "module": "HR",
   "name": "Budgeting",
   "number_cards": [],
@@ -2683,6 +2683,23 @@
   ],
   "sequence_id": 4.0,
   "shortcuts": [
+   {
+    "color": "Grey",
+    "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "Finance Dashboard",
+    "link_to": "finance-dashboard",
+    "parent": "Budgeting",
+    "parentfield": "shortcuts",
+    "parenttype": "Workspace",
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "Page",
+    "url": null
+   },
    {
     "color": "Grey",
     "doc_view": "List",
