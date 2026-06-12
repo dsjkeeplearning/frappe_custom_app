@@ -2185,7 +2185,7 @@
  },
  {
   "charts": [],
-  "content": "[{\"id\":\"q7KdKlmxnN\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Expense &amp; Request</span>\",\"col\":12}},{\"id\":\"ZfkXjbu3VP\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Expense Claim\",\"col\":3}},{\"id\":\"T8llvQpmvI\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"All Expense Claims\",\"col\":3}},{\"id\":\"j-spjBi8TN\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"YbMhQePZPq\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Material Request\",\"col\":3}},{\"id\":\"ZmIezQ1DU8\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"All Material Request\",\"col\":3}},{\"id\":\"uoM6I2Y8E3\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports</b></span>\",\"col\":12}},{\"id\":\"qWfApbzh6X\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Institution budget\",\"col\":3}}]",
+  "content": "[{\"id\":\"q7KdKlmxnN\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Expense &amp; Request</span>\",\"col\":12}},{\"id\":\"ZfkXjbu3VP\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Expense Claim\",\"col\":3}},{\"id\":\"T8llvQpmvI\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"All Expense Claims\",\"col\":3}},{\"id\":\"j-spjBi8TN\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"YbMhQePZPq\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Material Request\",\"col\":3}},{\"id\":\"ZmIezQ1DU8\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"All Material Request\",\"col\":3}},{\"id\":\"uoM6I2Y8E3\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports</b></span>\",\"col\":12}},{\"id\":\"qWfApbzh6X\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Institution budget\",\"col\":3}},{\"id\":\"GacdBHeyZH\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Master</b></span>\",\"col\":12}},{\"id\":\"uNVCiWuMBK\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Verifier PR Settings\",\"col\":3}}]",
   "custom_blocks": [],
   "docstatus": 0,
   "doctype": "Workspace",
@@ -2196,7 +2196,7 @@
   "is_hidden": 0,
   "label": "Expense & Request",
   "links": [],
-  "modified": "2026-01-26 13:46:20.931293",
+  "modified": "2026-06-12 16:36:58.602128",
   "module": "HR",
   "name": "Expense & Request",
   "number_cards": [],
@@ -2214,6 +2214,23 @@
   ],
   "sequence_id": 2.0,
   "shortcuts": [
+   {
+    "color": "Grey",
+    "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "Verifier PR Settings",
+    "link_to": "Verifier PR Settings",
+    "parent": "Expense & Request",
+    "parentfield": "shortcuts",
+    "parenttype": "Workspace",
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "DocType",
+    "url": null
+   },
    {
     "color": "Grey",
     "doc_view": "List",
