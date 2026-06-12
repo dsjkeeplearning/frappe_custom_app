@@ -219,3 +219,34 @@ def notify_employee_on_status_change(doc, method=None):
         reference_name=doc.name,
     )
  
+ 
+def validate_request_verifier(doc, method=None):
+    """
+    If the selected cost center is in Verifier PR Settings,
+    custom_request_verifier is mandatory. Otherwise it must be blank.
+    """
+    cost_center = doc.custom_cost_center
+    if not cost_center:
+        return
+
+    # Check whether this cost center requires a verifier
+    verifier_required = frappe.db.exists(
+        "Verifier PR Details",
+        {
+            "parent": "Verifier PR Settings",
+            "parenttype": "Verifier PR Settings",
+            "cost_center": cost_center,
+        }
+    )
+
+    if verifier_required:
+        if not doc.custom_request_verifier:
+            frappe.throw(
+                _("Request Verifier is mandatory for Cost Center <b>{0}</b>.").format(
+                    cost_center
+                )
+            )
+    else:
+        # Cost center not in the list — verifier must not be set
+        if doc.custom_request_verifier:
+            doc.custom_request_verifier = None

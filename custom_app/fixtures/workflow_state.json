@@ -70,5 +70,14 @@
   "name": "Approved by Manager",
   "style": "Success",
   "workflow_state_name": "Approved by Manager"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow State",
+  "icon": "",
+  "modified": "2026-06-12 15:10:08.983660",
+  "name": "Verified",
+  "style": "",
+  "workflow_state_name": "Verified"
  }
 ]

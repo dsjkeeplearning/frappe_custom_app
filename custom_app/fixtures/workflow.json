@@ -4,7 +4,7 @@
   "doctype": "Workflow",
   "document_type": "Material Request",
   "is_active": 1,
-  "modified": "2026-06-04 12:44:58.295266",
+  "modified": "2026-06-12 15:23:08.863377",
   "name": "Material Request 2 Step Verification",
   "override_status": 1,
   "send_email_alert": 0,
@@ -23,7 +23,23 @@
     "state": "Draft",
     "update_field": null,
     "update_value": null,
-    "workflow_builder_id": null
+    "workflow_builder_id": "1"
+   },
+   {
+    "allow_edit": "Expense Approver",
+    "avoid_status_override": 0,
+    "doc_status": "0",
+    "is_optional_state": 0,
+    "message": null,
+    "next_action_email_template": null,
+    "parent": "Material Request 2 Step Verification",
+    "parentfield": "states",
+    "parenttype": "Workflow",
+    "send_email": 1,
+    "state": "Verified",
+    "update_field": null,
+    "update_value": null,
+    "workflow_builder_id": "2"
    },
    {
     "allow_edit": "Expense Approver",
@@ -39,7 +55,7 @@
     "state": "Approved by Manager",
     "update_field": null,
     "update_value": null,
-    "workflow_builder_id": null
+    "workflow_builder_id": "3"
    },
    {
     "allow_edit": "Expense Approver",
@@ -55,7 +71,7 @@
     "state": "Rejected",
     "update_field": null,
     "update_value": null,
-    "workflow_builder_id": null
+    "workflow_builder_id": "4"
    },
    {
     "allow_edit": "Expense Approver",
@@ -71,7 +87,7 @@
     "state": "Cancelled",
     "update_field": null,
     "update_value": null,
-    "workflow_builder_id": null
+    "workflow_builder_id": "5"
    }
   ],
   "transitions": [
@@ -79,27 +95,40 @@
     "action": "Approve",
     "allow_self_approval": 0,
     "allowed": "Expense Approver",
-    "condition": null,
+    "condition": "doc.custom_request_verifier == None or doc.custom_request_verifier == \"\"",
     "next_state": "Approved by Manager",
     "parent": "Material Request 2 Step Verification",
     "parentfield": "transitions",
     "parenttype": "Workflow",
     "send_email_to_creator": 0,
     "state": "Draft",
-    "workflow_builder_id": null
+    "workflow_builder_id": "action-1"
+   },
+   {
+    "action": "Verify",
+    "allow_self_approval": 1,
+    "allowed": "Expense Approver",
+    "condition": null,
+    "next_state": "Verified",
+    "parent": "Material Request 2 Step Verification",
+    "parentfield": "transitions",
+    "parenttype": "Workflow",
+    "send_email_to_creator": 0,
+    "state": "Draft",
+    "workflow_builder_id": "action-4"
    },
    {
     "action": "Reject",
     "allow_self_approval": 0,
     "allowed": "Expense Approver",
-    "condition": null,
+    "condition": "",
     "next_state": "Rejected",
     "parent": "Material Request 2 Step Verification",
     "parentfield": "transitions",
     "parenttype": "Workflow",
     "send_email_to_creator": 0,
     "state": "Draft",
-    "workflow_builder_id": null
+    "workflow_builder_id": "action-2"
    },
    {
     "action": "Cancel",
@@ -112,10 +141,36 @@
     "parenttype": "Workflow",
     "send_email_to_creator": 0,
     "state": "Approved by Manager",
-    "workflow_builder_id": null
+    "workflow_builder_id": "action-3"
+   },
+   {
+    "action": "Approve",
+    "allow_self_approval": 1,
+    "allowed": "Expense Approver",
+    "condition": null,
+    "next_state": "Approved by Manager",
+    "parent": "Material Request 2 Step Verification",
+    "parentfield": "transitions",
+    "parenttype": "Workflow",
+    "send_email_to_creator": 0,
+    "state": "Verified",
+    "workflow_builder_id": "action-5"
+   },
+   {
+    "action": "Reject",
+    "allow_self_approval": 1,
+    "allowed": "All",
+    "condition": null,
+    "next_state": "Rejected",
+    "parent": "Material Request 2 Step Verification",
+    "parentfield": "transitions",
+    "parenttype": "Workflow",
+    "send_email_to_creator": 0,
+    "state": "Verified",
+    "workflow_builder_id": "action-6"
    }
   ],
-  "workflow_data": null,
+  "workflow_data": "[{\"type\":\"state\",\"dimensions\":{\"width\":85,\"height\":53},\"handleBounds\":{\"source\":[{\"id\":\"top\",\"position\":\"top\",\"x\":38.76251220703125,\"y\":-11.199996948242188,\"width\":7,\"height\":7},{\"id\":\"right\",\"position\":\"right\",\"x\":88.73748779296875,\"y\":22.800003051757812,\"width\":7,\"height\":7},{\"id\":\"bottom\",\"position\":\"bottom\",\"x\":38.76251220703125,\"y\":56.80000305175781,\"width\":7,\"height\":7},{\"id\":\"left\",\"position\":\"left\",\"x\":-11.199951171875,\"y\":22.800003051757812,\"width\":7,\"height\":7}]},\"computedPosition\":{\"x\":550,\"y\":100,\"z\":0},\"id\":\"1\",\"position\":{\"x\":550,\"y\":100}},{\"type\":\"state\",\"dimensions\":{\"width\":103,\"height\":53},\"handleBounds\":{\"source\":[{\"id\":\"top\",\"position\":\"top\",\"x\":48.137451171875,\"y\":-11.200004577636719,\"width\":7,\"height\":7},{\"id\":\"right\",\"position\":\"right\",\"x\":107.4874267578125,\"y\":22.800003051757812,\"width\":7,\"height\":7},{\"id\":\"bottom\",\"position\":\"bottom\",\"x\":48.137451171875,\"y\":56.80000305175781,\"width\":7,\"height\":7},{\"id\":\"left\",\"position\":\"left\",\"x\":-11.2000732421875,\"y\":22.800003051757812,\"width\":7,\"height\":7}]},\"computedPosition\":{\"x\":923,\"y\":-7,\"z\":0},\"id\":\"2\",\"position\":{\"x\":923,\"y\":-7}},{\"type\":\"state\",\"dimensions\":{\"width\":162,\"height\":74},\"handleBounds\":{\"source\":[{\"id\":\"top\",\"position\":\"top\",\"x\":77.2999267578125,\"y\":-11.200004577636719,\"width\":7,\"height\":7},{\"id\":\"right\",\"position\":\"right\",\"x\":165.7999267578125,\"y\":33.30000305175781,\"width\":7,\"height\":7},{\"id\":\"bottom\",\"position\":\"bottom\",\"x\":77.2999267578125,\"y\":77.80000305175781,\"width\":7,\"height\":7},{\"id\":\"left\",\"position\":\"left\",\"x\":-11.2000732421875,\"y\":33.30000305175781,\"width\":7,\"height\":7}]},\"computedPosition\":{\"x\":1333,\"y\":25,\"z\":0},\"id\":\"3\",\"position\":{\"x\":1333,\"y\":25}},{\"type\":\"state\",\"dimensions\":{\"width\":110,\"height\":53},\"handleBounds\":{\"source\":[{\"id\":\"top\",\"position\":\"top\",\"x\":51.574951171875,\"y\":-11.20001220703125,\"width\":7,\"height\":7},{\"id\":\"right\",\"position\":\"right\",\"x\":114.35009765625,\"y\":22.79998779296875,\"width\":7,\"height\":7},{\"id\":\"bottom\",\"position\":\"bottom\",\"x\":51.574951171875,\"y\":56.79998779296875,\"width\":7,\"height\":7},{\"id\":\"left\",\"position\":\"left\",\"x\":-11.2000732421875,\"y\":22.79998779296875,\"width\":7,\"height\":7}]},\"computedPosition\":{\"x\":1637,\"y\":270,\"z\":0},\"id\":\"4\",\"position\":{\"x\":1637,\"y\":270}},{\"type\":\"state\",\"dimensions\":{\"width\":118,\"height\":53},\"handleBounds\":{\"source\":[{\"id\":\"top\",\"position\":\"top\",\"x\":55.72509765625,\"y\":-11.199996948242188,\"width\":7,\"height\":7},{\"id\":\"right\",\"position\":\"right\",\"x\":122.64990234375,\"y\":22.800003051757812,\"width\":7,\"height\":7},{\"id\":\"bottom\",\"position\":\"bottom\",\"x\":55.72509765625,\"y\":56.80000305175781,\"width\":7,\"height\":7},{\"id\":\"left\",\"position\":\"left\",\"x\":-11.199951171875,\"y\":22.800003051757812,\"width\":7,\"height\":7}]},\"computedPosition\":{\"x\":2150,\"y\":100,\"z\":0},\"id\":\"5\",\"position\":{\"x\":2150,\"y\":100}},{\"type\":\"action\",\"dimensions\":{\"width\":78,\"height\":33},\"handleBounds\":{\"source\":[{\"id\":\"top\",\"position\":\"top\",\"x\":35.9249267578125,\"y\":-2.1999969482421875,\"width\":6,\"height\":6},{\"id\":\"right\",\"position\":\"right\",\"x\":74.0499267578125,\"y\":13.300003051757812,\"width\":6,\"height\":6},{\"id\":\"bottom\",\"position\":\"bottom\",\"x\":35.9249267578125,\"y\":28.800003051757812,\"width\":6,\"height\":6},{\"id\":\"left\",\"position\":\"left\",\"x\":-2.2000732421875,\"y\":13.300003051757812,\"width\":6,\"height\":6}]},\"computedPosition\":{\"x\":800,\"y\":120,\"z\":0},\"id\":\"action-1\",\"position\":{\"x\":800,\"y\":120},\"data\":{\"from_id\":\"1\",\"to_id\":\"3\"}},{\"type\":\"action\",\"dimensions\":{\"width\":64,\"height\":33},\"handleBounds\":{\"source\":[{\"id\":\"top\",\"position\":\"top\",\"x\":28.75,\"y\":-2.20001220703125,\"width\":6,\"height\":6},{\"id\":\"right\",\"position\":\"right\",\"x\":59.699951171875,\"y\":13.29998779296875,\"width\":6,\"height\":6},{\"id\":\"bottom\",\"position\":\"bottom\",\"x\":28.75,\"y\":28.79998779296875,\"width\":6,\"height\":6},{\"id\":\"left\",\"position\":\"left\",\"x\":-2.2000732421875,\"y\":13.29998779296875,\"width\":6,\"height\":6}]},\"computedPosition\":{\"x\":779,\"y\":257,\"z\":0},\"id\":\"action-2\",\"position\":{\"x\":779,\"y\":257},\"data\":{\"from_id\":\"1\",\"to_id\":\"4\"}},{\"type\":\"action\",\"dimensions\":{\"width\":68,\"height\":33},\"handleBounds\":{\"source\":[{\"id\":\"top\",\"position\":\"top\",\"x\":31.0625,\"y\":-2.1999969482421875,\"width\":6,\"height\":6},{\"id\":\"right\",\"position\":\"right\",\"x\":64.324951171875,\"y\":13.300003051757812,\"width\":6,\"height\":6},{\"id\":\"bottom\",\"position\":\"bottom\",\"x\":31.0625,\"y\":28.800003051757812,\"width\":6,\"height\":6},{\"id\":\"left\",\"position\":\"left\",\"x\":-2.2000732421875,\"y\":13.300003051757812,\"width\":6,\"height\":6}]},\"computedPosition\":{\"x\":1600,\"y\":120,\"z\":0},\"id\":\"action-3\",\"position\":{\"x\":1600,\"y\":120},\"data\":{\"from_id\":\"3\",\"to_id\":\"5\"}},{\"type\":\"action\",\"dimensions\":{\"width\":61,\"height\":33},\"handleBounds\":{\"source\":[{\"id\":\"top\",\"position\":\"top\",\"x\":27.4625244140625,\"y\":-2.2000045776367188,\"width\":6,\"height\":6},{\"id\":\"right\",\"position\":\"right\",\"x\":57.137451171875,\"y\":13.299995422363281,\"width\":6,\"height\":6},{\"id\":\"bottom\",\"position\":\"bottom\",\"x\":27.4625244140625,\"y\":28.800003051757812,\"width\":6,\"height\":6},{\"id\":\"left\",\"position\":\"left\",\"x\":-2.2000732421875,\"y\":13.299995422363281,\"width\":6,\"height\":6}]},\"computedPosition\":{\"x\":733,\"y\":-9,\"z\":0},\"id\":\"action-4\",\"position\":{\"x\":733,\"y\":-9},\"data\":{\"from_id\":\"1\",\"to_id\":\"2\"}},{\"type\":\"action\",\"dimensions\":{\"width\":78,\"height\":33},\"handleBounds\":{\"source\":[{\"id\":\"top\",\"position\":\"top\",\"x\":35.9249267578125,\"y\":-2.1999969482421875,\"width\":6,\"height\":6},{\"id\":\"right\",\"position\":\"right\",\"x\":74.0499267578125,\"y\":13.299999237060547,\"width\":6,\"height\":6},{\"id\":\"bottom\",\"position\":\"bottom\",\"x\":35.9249267578125,\"y\":28.799999237060547,\"width\":6,\"height\":6},{\"id\":\"left\",\"position\":\"left\",\"x\":-2.2000732421875,\"y\":13.299999237060547,\"width\":6,\"height\":6}]},\"computedPosition\":{\"x\":1154.75,\"y\":-57,\"z\":0},\"id\":\"action-5\",\"position\":{\"x\":1154.75,\"y\":-57},\"data\":{\"from_id\":\"2\",\"to_id\":\"3\"}},{\"type\":\"action\",\"dimensions\":{\"width\":64,\"height\":33},\"handleBounds\":{\"source\":[{\"id\":\"top\",\"position\":\"top\",\"x\":28.75,\"y\":-2.20001220703125,\"width\":6,\"height\":6},{\"id\":\"right\",\"position\":\"right\",\"x\":59.70001220703125,\"y\":13.29998779296875,\"width\":6,\"height\":6},{\"id\":\"bottom\",\"position\":\"bottom\",\"x\":28.75,\"y\":28.79998779296875,\"width\":6,\"height\":6},{\"id\":\"left\",\"position\":\"left\",\"x\":-2.199951171875,\"y\":13.29998779296875,\"width\":6,\"height\":6}]},\"computedPosition\":{\"x\":1191.75,\"y\":174,\"z\":1000},\"id\":\"action-6\",\"position\":{\"x\":1191.75,\"y\":174},\"data\":{\"from_id\":\"2\",\"to_id\":\"4\"}},{\"sourceHandle\":\"right\",\"targetHandle\":\"left\",\"type\":\"transition\",\"source\":\"1\",\"target\":\"action-1\",\"updatable\":true,\"id\":\"edge-1-action-1\",\"animated\":true,\"sourceX\":645.7374877929688,\"sourceY\":126.30000305175781,\"targetX\":797.7999267578125,\"targetY\":136.3000030517578},{\"sourceHandle\":\"right\",\"targetHandle\":\"left\",\"type\":\"transition\",\"source\":\"action-1\",\"target\":\"3\",\"updatable\":true,\"id\":\"edge-action-1-3\",\"animated\":true,\"sourceX\":880.0499267578125,\"sourceY\":136.3000030517578,\"targetX\":1321.7999267578125,\"targetY\":61.80000305175781,\"markerEnd\":{\"type\":\"arrow\",\"width\":15,\"height\":15,\"strokeWidth\":1.5,\"color\":\"#687178\"}},{\"sourceHandle\":\"right\",\"targetHandle\":\"left\",\"type\":\"transition\",\"source\":\"1\",\"target\":\"action-2\",\"updatable\":true,\"id\":\"edge-1-action-2\",\"animated\":true,\"sourceX\":645.7374877929688,\"sourceY\":126.30000305175781,\"targetX\":776.7999267578125,\"targetY\":273.29998779296875},{\"sourceHandle\":\"right\",\"targetHandle\":\"left\",\"type\":\"transition\",\"source\":\"action-2\",\"target\":\"4\",\"updatable\":true,\"id\":\"edge-action-2-4\",\"animated\":true,\"sourceX\":844.699951171875,\"sourceY\":273.29998779296875,\"targetX\":1625.7999267578125,\"targetY\":296.29998779296875,\"markerEnd\":{\"type\":\"arrow\",\"width\":15,\"height\":15,\"strokeWidth\":1.5,\"color\":\"#687178\"}},{\"sourceHandle\":\"right\",\"targetHandle\":\"left\",\"type\":\"transition\",\"source\":\"3\",\"target\":\"action-3\",\"updatable\":true,\"id\":\"edge-3-action-3\",\"animated\":true,\"sourceX\":1505.7999267578125,\"sourceY\":61.80000305175781,\"targetX\":1597.7999267578125,\"targetY\":136.3000030517578},{\"sourceHandle\":\"right\",\"targetHandle\":\"left\",\"type\":\"transition\",\"source\":\"action-3\",\"target\":\"5\",\"updatable\":true,\"id\":\"edge-action-3-5\",\"animated\":true,\"sourceX\":1670.324951171875,\"sourceY\":136.3000030517578,\"targetX\":2138.800048828125,\"targetY\":126.30000305175781,\"markerEnd\":{\"type\":\"arrow\",\"width\":15,\"height\":15,\"strokeWidth\":1.5,\"color\":\"#687178\"}},{\"sourceHandle\":\"top\",\"targetHandle\":\"left\",\"type\":\"transition\",\"source\":\"1\",\"target\":\"action-4\",\"updatable\":true,\"animated\":true,\"id\":\"vueflow__edge-1top-action-4left\",\"sourceX\":592.2625122070312,\"sourceY\":88.80000305175781,\"targetX\":730.7999267578125,\"targetY\":7.299995422363281},{\"sourceHandle\":\"right\",\"targetHandle\":\"left\",\"type\":\"transition\",\"source\":\"action-4\",\"target\":\"2\",\"updatable\":true,\"animated\":true,\"id\":\"vueflow__edge-action-4right-2left\",\"sourceX\":796.137451171875,\"sourceY\":7.299995422363281,\"targetX\":911.7999267578125,\"targetY\":19.300003051757812,\"markerEnd\":{\"type\":\"arrow\",\"width\":15,\"height\":15,\"strokeWidth\":1.5,\"color\":\"#687178\"}},{\"sourceHandle\":\"right\",\"targetHandle\":\"left\",\"type\":\"transition\",\"source\":\"2\",\"target\":\"action-5\",\"updatable\":true,\"animated\":true,\"id\":\"vueflow__edge-2right-action-5left\",\"sourceX\":1037.4874267578125,\"sourceY\":19.300003051757812,\"targetX\":1152.5499267578125,\"targetY\":-40.70000076293945},{\"sourceHandle\":\"right\",\"targetHandle\":\"top\",\"type\":\"transition\",\"source\":\"action-5\",\"target\":\"3\",\"updatable\":true,\"animated\":true,\"id\":\"vueflow__edge-action-5right-3top\",\"sourceX\":1234.7999267578125,\"sourceY\":-40.70000076293945,\"targetX\":1413.7999267578125,\"targetY\":13.799995422363281,\"markerEnd\":{\"type\":\"arrow\",\"width\":15,\"height\":15,\"strokeWidth\":1.5,\"color\":\"#687178\"}},{\"sourceHandle\":\"bottom\",\"targetHandle\":\"left\",\"type\":\"transition\",\"source\":\"2\",\"target\":\"action-6\",\"updatable\":true,\"animated\":true,\"id\":\"vueflow__edge-2bottom-action-6left\",\"sourceX\":974.637451171875,\"sourceY\":56.80000305175781,\"targetX\":1189.550048828125,\"targetY\":190.29998779296875},{\"sourceHandle\":\"right\",\"targetHandle\":\"left\",\"type\":\"transition\",\"source\":\"action-6\",\"target\":\"4\",\"updatable\":true,\"animated\":true,\"id\":\"vueflow__edge-action-6right-4left\",\"sourceX\":1257.4500122070312,\"sourceY\":190.29998779296875,\"targetX\":1625.7999267578125,\"targetY\":296.29998779296875,\"markerEnd\":{\"type\":\"arrow\",\"width\":11,\"height\":11,\"strokeWidth\":1.7,\"color\":\"#171717\"}}]",
   "workflow_name": "Material Request 2 Step Verification",
   "workflow_state_field": "workflow_state"
  },

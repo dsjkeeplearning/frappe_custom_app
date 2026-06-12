@@ -47,5 +47,12 @@
   "modified": "2025-10-01 12:17:46.602802",
   "name": "Approve",
   "workflow_action_name": "Approve"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Workflow Action Master",
+  "modified": "2026-06-12 15:12:51.973806",
+  "name": "Verify",
+  "workflow_action_name": "Verify"
  }
 ]

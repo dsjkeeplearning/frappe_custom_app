@@ -36,6 +36,7 @@ doc_events = {
     },
     "Material Request": {
         "before_save": [
+            "custom_app.api.material_request.validate_request_verifier",
             "custom_app.api.material_request.update_item_cost_center",
             "custom_app.api.letter_head.set_letter_head"
         ],
