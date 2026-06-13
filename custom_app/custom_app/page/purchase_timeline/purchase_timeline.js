@@ -368,7 +368,7 @@ class PurchaseTimeline {
 				<div class="pt-header">
 					<div class="pt-header-left">
 						<h1>Purchase <span>Timeline</span></h1>
-						<p>End-to-end procurement · MR → RFQ → SQ → PO → Receipt / Invoice</p>
+						<p>End-to-end procurement · PR → RFQ → SQ → PO → Receipt / Invoice</p>
 					</div>
 				</div>
 				<div class="pt-bar">
@@ -452,7 +452,7 @@ class PurchaseTimeline {
 		html += `<div class="pt-fg pt-fg-sm">
 			<label class="pt-fl">Type</label>
 			<select class="pt-filter" id="pt-f-type">
-				<option value="mr">Material Request</option>
+				<option value="mr">Purchase Request</option>
 				<option value="po">Purchase Order</option>
 				<option value="pi">Purchase Invoice</option>
 				<option value="pr">Purchase Receipt</option>
@@ -511,7 +511,7 @@ class PurchaseTimeline {
 		this.$filterRow.find("#pt-f-type").on("change", (e) => {
 			const type = e.target.value;
 			const labels = {
-				mr: "Material Request", po: "Purchase Order", pi: "Purchase Invoice",
+				mr: "Purchase Request", po: "Purchase Order", pi: "Purchase Invoice",
 				pr: "Purchase Receipt", sq: "Supplier Quotation", rfq: "Request for Quotation"
 			};
 			this.$filterRow.find("#pt-f-doc-label").text(labels[type] || "Document");
@@ -631,7 +631,7 @@ class PurchaseTimeline {
 	}
 
 	_updateActiveTags(f) {
-		const typeLabels = { mr: "MR", po: "PO", pi: "PI", pr: "PR", sq: "SQ", rfq: "RFQ" };
+		const typeLabels = { mr: "PR", po: "PO", pi: "PI", pr: "PR", sq: "SQ", rfq: "RFQ" };
 		const tags = [];
 		const type = f._type || "mr";
 		const docKey = { mr: "material_request", po: "purchase_order", pi: "purchase_invoice", pr: "purchase_receipt", sq: "supplier_quotation", rfq: "rfq" }[type];
@@ -725,8 +725,8 @@ class PurchaseTimeline {
 			<div class="pt-graph-card-header">
 				<div class="pt-graph-card-icon">📋</div>
 				<div style="flex:1;min-width:0;">
-					<div class="pt-graph-card-title">${isNoMR ? "No Material Request" : `Material Request · ${tree.name}`}</div>
-					<div class="pt-graph-card-sub">${!isNoMR ? `${tree.transaction_date || "—"} · ${tree.company || ""} · ${tree.items_count || 0} item(s)` : "Purchase Order without MR"}</div>
+					<div class="pt-graph-card-title">${isNoMR ? "No Purchase Request" : `Purchase Request · ${tree.name}`}</div>
+					<div class="pt-graph-card-sub">${!isNoMR ? `${tree.transaction_date || "—"} · ${tree.company || ""} · ${tree.items_count || 0} item(s)` : "Purchase Order without PR"}</div>
 					<div class="pt-graph-card-badges">${statusBadge}${tenderBadge}</div>
 				</div>
 			</div>
@@ -758,7 +758,7 @@ class PurchaseTimeline {
 		if (!tree.no_mr) {
 			push(0, {
 				id: `node-mr-${tree.name}`, col: 0,
-				label: tree.name, sub: "Material Request",
+				label: tree.name, sub: "Purchase Request",
 				color: "#7f56d9", bg: "#f4f0ff",
 				data: { type: "mr", ...tree },
 			});
@@ -834,7 +834,7 @@ class PurchaseTimeline {
 		});
 
 		// Column labels
-		const colLabels = { 0: "MR", 1: "RFQ", 2: "Quotation", 3: "PO", 4: "Receipt / Invoice" };
+		const colLabels = { 0: "PR", 1: "RFQ", 2: "Quotation", 3: "PO", 4: "Receipt / Invoice" };
 		let labelsSvg = "";
 		usedCols.forEach((c, i) => {
 			const x = padding + i * colW + nodeW / 2;
@@ -939,7 +939,7 @@ class PurchaseTimeline {
 		const fmt = (v) => v ? frappe.format(v, { fieldtype: "Currency" }) : "—";
 		const lines = [];
 		if (nd.type === "mr") {
-			lines.push(`<strong>Material Request</strong>`, nd.name, `Status: ${nd.workflow_state || nd.status || "—"}`, `Date: ${nd.transaction_date || "—"}`);
+			lines.push(`<strong>Purchase Request</strong>`, nd.name, `Status: ${nd.workflow_state || nd.status || "—"}`, `Date: ${nd.transaction_date || "—"}`);
 		} else if (nd.type === "rfq") {
 			lines.push(`<strong>RFQ</strong>`, nd.name, `Status: ${nd.status || "—"}`);
 		} else if (nd.type === "sq") {
@@ -963,7 +963,7 @@ class PurchaseTimeline {
 
 	_openPanel(nd) {
 		const typeMap = {
-			mr: { icon: "📋", label: "Material Request", color: "#f4f0ff", linkBase: "/app/material-request" },
+			mr: { icon: "📋", label: "Purchase Request", color: "#f4f0ff", linkBase: "/app/material-request" },
 			rfq: { icon: "📨", label: "Request for Quotation", color: "#eff8ff", linkBase: "/app/request-for-quotation" },
 			sq: { icon: "💬", label: "Supplier Quotation", color: "#fff7e6", linkBase: "/app/supplier-quotation" },
 			po: { icon: "🛒", label: "Purchase Order", color: "#ecfdf3", linkBase: "/app/purchase-order" },
