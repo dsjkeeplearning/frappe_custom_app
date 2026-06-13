@@ -101,6 +101,13 @@ class PurchaseTimeline {
 		}
 		.pt-btn-primary:hover { background: #6941c6; border-color: #6941c6; }
 
+		/* Copy URL button */
+		.pt-btn-copy {
+			background: #f9fafb; border-color: #d0d5dd; color: #344054;
+		}
+		.pt-btn-copy:hover { background: #f2f4f7; }
+		.pt-btn-copy.copied { background: #ecfdf3; border-color: #6ce9a6; color: #027a48; }
+
 		.pt-active-dot {
 			width: 7px; height: 7px; border-radius: 50%;
 			background: #7f56d9; display: none;
@@ -381,6 +388,7 @@ class PurchaseTimeline {
 						<div id="pt-active-tags" class="pt-active-tags" style="flex:1;"></div>
 						<div class="pt-bar-actions">
 							<span class="pt-active-dot" id="pt-dot"></span>
+							<button class="pt-btn pt-btn-copy" id="pt-copy-url" title="Copy shareable link">🔗 Copy Link</button>
 							<button class="pt-btn" id="pt-clear">✕ Clear</button>
 							<button class="pt-btn pt-btn-primary" id="pt-search-btn">⌕ Search</button>
 						</div>
@@ -424,6 +432,167 @@ class PurchaseTimeline {
 		this.$root.find("#pt-clear").on("click", () => this._clearFilters());
 		this.$root.find("#pt-search-btn").on("click", () => this._fetchTree(true));
 		this.$root.find("#pt-panel-close").on("click", () => this._closePanel());
+
+		// Copy shareable URL
+		this.$root.find("#pt-copy-url").on("click", () => this._copyShareableUrl());
+	}
+
+	// ─────────────────────────────────────────────────────────────
+	// URL PARAMS — read / write
+	// ─────────────────────────────────────────────────────────────
+
+	/**
+	 * Extract our custom params from the URL.
+	 *
+	 * Frappe stores the current page in window.location.hash like:
+	 *   #purchase-timeline                  (no params)
+	 *   #purchase-timeline?type=mr&...      (with our params, clean)
+	 *
+	 * The broken URL you saw — ?type=mr?type=pi?type=mr — happens when
+	 * _setUrlParams reads the hash AFTER Frappe has already appended its
+	 * own routing info, so "base" keeps growing.  We fix this by always
+	 * stripping EVERYTHING from the first "?" onward before re-appending.
+	 *
+	 * We also guard against Frappe passing additional query-string params
+	 * in window.location.search (rare, but possible).
+	 */
+	_getHashBase() {
+		// The hash fragment without the leading "#" and without anything
+		// after the first "?".  e.g. "purchase-timeline"
+		const hash = window.location.hash || "";
+		const bare = hash.startsWith("#") ? hash.slice(1) : hash;
+		const qIdx = bare.indexOf("?");
+		return "#" + (qIdx === -1 ? bare : bare.slice(0, qIdx));
+	}
+
+	_getUrlParams() {
+		// Parse only the portion of the hash that follows the first "?"
+		const hash = window.location.hash || "";
+		const qIdx = hash.indexOf("?");
+		if (qIdx === -1) return {};
+		const qs = hash.slice(qIdx + 1);
+		const params = {};
+		new URLSearchParams(qs).forEach((v, k) => {
+			if (v) params[k] = v;
+		});
+		return params;
+	}
+
+	_setUrlParams(paramObj) {
+		// Build a clean query string from non-empty values only
+		const qs = new URLSearchParams();
+		Object.entries(paramObj).forEach(([k, v]) => {
+			if (v) qs.set(k, v);
+		});
+
+		// Always rebuild from the BARE hash base (no previous "?…" tail)
+		// This is the key fix — we never append onto an already-param'd hash.
+		const base = this._getHashBase(); // e.g. "#purchase-timeline"
+		const newHash = qs.toString() ? `${base}?${qs.toString()}` : base;
+
+		if (window.history && window.history.replaceState) {
+			const newUrl = window.location.pathname + window.location.search + newHash;
+			window.history.replaceState(null, "", newUrl);
+		}
+	}
+
+	/**
+	 * Gather current filter state and push it to the URL.
+	 * Called after every fetch so the URL always reflects the current view.
+	 */
+	_syncFiltersToUrl() {
+		const getRaw = (id) => (this.$filterRow.find(`#${id}`).val() || "").trim() || null;
+		const getCtrl = (id) => (this.controls[id]?.get_value() || "").trim() || null;
+
+		const type = getRaw("pt-f-type") || "mr";
+		const params = {
+			type,
+			doc: getCtrl("pt-f-doc") || null,
+			status: getRaw("pt-f-status") || null,
+			company: getCtrl("pt-f-company") || null,
+			supplier: getCtrl("pt-f-supplier") || null,
+			cost_center: getCtrl("pt-f-cost-center") || null,
+			date_from: getRaw("pt-f-date-from") || null,
+			date_to: getRaw("pt-f-date-to") || null,
+		};
+
+		// Don't persist locked company — it's always forced server-side
+		if (this.filterOptions?.lock_company) delete params.company;
+
+		this._setUrlParams(params);
+	}
+
+	/**
+	 * Read URL params and restore the filter UI.
+	 * Called once after filters are built, before the first fetch.
+	 */
+	_restoreFiltersFromUrl() {
+		const p = this._getUrlParams();
+		if (!Object.keys(p).length) return Promise.resolve(false);
+
+		// Type selector — must fire first so _buildDocControl creates the
+		// correct link control before we try to set_value on it
+		if (p.type) {
+			this.$filterRow.find("#pt-f-type").val(p.type).trigger("change");
+		}
+
+		// Status
+		if (p.status) {
+			this.$filterRow.find("#pt-f-status").val(p.status);
+		}
+
+		// Date range
+		if (p.date_from) this.$filterRow.find("#pt-f-date-from").val(p.date_from);
+		if (p.date_to) this.$filterRow.find("#pt-f-date-to").val(p.date_to);
+
+		// Auto-open the filter bar so the user can see what's active
+		this.$filterRow.addClass("open");
+		this.$root.find("#pt-sb-chev").addClass("open");
+		const typeLabels = {
+			mr: "Purchase Request", po: "Purchase Order", pi: "Purchase Invoice",
+			pr: "Purchase Receipt", sq: "Supplier Quotation", rfq: "Request for Quotation"
+		};
+		this.$root.find("#pt-search-by-val").text(typeLabels[p.type] || "All");
+
+		// Link controls — set_value is async; collect all promises and wait
+		// for them to settle before the caller triggers a fetch, otherwise
+		// the fetch fires with empty link values and ignores the URL params.
+		const linkSets = [];
+		if (p.doc && this.controls["pt-f-doc"]) {
+			linkSets.push(Promise.resolve(this.controls["pt-f-doc"].set_value(p.doc)));
+		}
+		if (p.company && this.controls["pt-f-company"]) {
+			linkSets.push(Promise.resolve(this.controls["pt-f-company"].set_value(p.company)));
+		}
+		if (p.supplier && this.controls["pt-f-supplier"]) {
+			linkSets.push(Promise.resolve(this.controls["pt-f-supplier"].set_value(p.supplier)));
+		}
+		if (p.cost_center && this.controls["pt-f-cost-center"]) {
+			linkSets.push(Promise.resolve(this.controls["pt-f-cost-center"].set_value(p.cost_center)));
+		}
+
+		// Return a promise that resolves to true once all link values are set
+		return Promise.all(linkSets).then(() => true);
+	}
+
+	/**
+	 * Build a full absolute URL containing the current filter state
+	 * and copy it to the clipboard.
+	 */
+	_copyShareableUrl() {
+		this._syncFiltersToUrl(); // make sure URL is up to date first
+
+		const url = window.location.href;
+		navigator.clipboard.writeText(url).then(() => {
+			const $btn = this.$root.find("#pt-copy-url");
+			$btn.text("✓ Copied!").addClass("copied");
+			setTimeout(() => {
+				$btn.text("🔗 Copy Link").removeClass("copied");
+			}, 2000);
+		}).catch(() => {
+			// Fallback for browsers that block clipboard API
+			frappe.msgprint({ title: "Shareable Link", message: url, indicator: "blue" });
+		});
 	}
 
 	// ─────────────────────────────────────────────────────────────
@@ -436,7 +605,13 @@ class PurchaseTimeline {
 				if (r.message) {
 					this.filterOptions = r.message;
 					this._buildFilters(r.message);
-					this._fetchTree();
+
+					// Wait for all link controls to be populated from the URL
+					// before triggering the fetch — otherwise the restored values
+					// aren't ready yet and the search runs with empty filters.
+					this._restoreFiltersFromUrl().then((hadParams) => {
+						this._fetchTree(hadParams);
+					});
 				}
 			},
 		});
@@ -464,7 +639,7 @@ class PurchaseTimeline {
 		// Dynamic doc link — shown/updated by type
 		html += `<div class="pt-fg" id="pt-f-doc-wrap"><label class="pt-fl" id="pt-f-doc-label">Document</label><div id="pt-f-doc"></div></div>`;
 
-		// Status — single "Status" field (MR status values cover both)
+		// Status
 		const allStatuses = [
 			"Draft", "Submitted", "Pending", "Open", "Ordered", "Issued",
 			"Received", "Partially Ordered", "Partially Received",
@@ -604,7 +779,7 @@ class PurchaseTimeline {
 			date_from: getRaw("pt-f-date-from"),
 			date_to: getRaw("pt-f-date-to"),
 			_type: type,
-			_status: status, // for display
+			_status: status,
 		};
 	}
 
@@ -627,6 +802,8 @@ class PurchaseTimeline {
 		this.$filterRow.find("input[type=date].pt-filter").val("");
 		this.$activeTags.html("");
 		this.$dot.removeClass("show");
+		// Clear URL params too
+		this._setUrlParams({});
 		this._fetchTree();
 	}
 
@@ -657,6 +834,7 @@ class PurchaseTimeline {
 	_fetchTree(forceLoading = false) {
 		const f = this._gatherFilters();
 		this._updateActiveTags(f);
+		this._syncFiltersToUrl(); // ← push current state to URL on every fetch
 		this._closePanel();
 
 		if (!this._loadedOnce || forceLoading) {
