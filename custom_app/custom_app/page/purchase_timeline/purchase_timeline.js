@@ -17,6 +17,7 @@ class PurchaseTimeline {
 		this._debounceTimer = null;
 		this._selectedNodeId = null;
 		this._injectStyles();
+		this._injectPageHeader();
 		this._buildLayout();
 		this._loadFilterOptions();
 	}
@@ -297,8 +298,65 @@ class PurchaseTimeline {
 		/* Scrollbar */
 		.pt-canvas::-webkit-scrollbar, .pt-panel-body::-webkit-scrollbar { width: 4px; }
 		.pt-canvas::-webkit-scrollbar-thumb, .pt-panel-body::-webkit-scrollbar-thumb { background: #e2e6ea; border-radius: 4px; }
+
+		/* ── Themed page header ── */
+		.pt-header {
+			background: #1a1d23;
+			padding: 18px 24px;
+			display: flex; align-items: center; justify-content: center;
+			flex-shrink: 0;
+		}
+		.pt-header-left { text-align: center; }
+		.pt-header-left h1 {
+			font-size: 20px; font-weight: 700; color: #fff;
+			letter-spacing: -.3px; margin: 0;
+		}
+		.pt-header-left h1 span { color: #9e77ed; }
+		.pt-header-left p {
+			font-size: 11px; color: rgba(255,255,255,.4);
+			margin-top: 3px; letter-spacing: .4px; text-transform: uppercase;
+		}
+
+		/* ── Fix filter alignment ── */
+		.pt-fg .frappe-control { margin-bottom: 0 !important; }
+		.pt-fg .frappe-control .form-group { margin-bottom: 0 !important; }
+		.pt-fg .frappe-control .control-input-wrapper {
+			padding: 0 !important;
+			height: 30px !important;
+			display: flex; align-items: center;
+		}
+		.pt-fg .frappe-control .input-with-feedback,
+		.pt-fg .frappe-control .awesomplete > input {
+			height: 30px !important;
+			font-size: 12px !important;
+			padding: 3px 8px !important;
+			border: 1px solid #d0d5dd !important;
+			border-radius: 6px !important;
+			margin: 0 !important;
+			line-height: normal !important;
+		}
+		.pt-fg .frappe-control .input-with-feedback:focus,
+		.pt-fg .frappe-control .awesomplete > input:focus {
+			border-color: #7f56d9 !important;
+			box-shadow: 0 0 0 3px rgba(127,86,217,.1) !important;
+			outline: none !important;
+		}
+		.pt-fg .frappe-control .control-label { display: none !important; }
+		.pt-fg .frappe-control .control-input { padding: 0 !important; }
 		`;
 		document.head.appendChild(style);
+	}
+
+	// ─────────────────────────────────────────────────────────────
+	// PAGE HEADER
+	// ─────────────────────────────────────────────────────────────
+	_injectPageHeader() {
+		if (!document.getElementById("pt-page-head-style")) {
+			const s = document.createElement("style");
+			s.id = "pt-page-head-style";
+			s.textContent = `.page-head { display: none !important; }`;
+			document.head.appendChild(s);
+		}
 	}
 
 	// ─────────────────────────────────────────────────────────────
@@ -307,6 +365,12 @@ class PurchaseTimeline {
 	_buildLayout() {
 		this.$root = $(`
 			<div class="pt-root">
+				<div class="pt-header">
+					<div class="pt-header-left">
+						<h1>Purchase <span>Timeline</span></h1>
+						<p>End-to-end procurement · MR → RFQ → SQ → PO → Receipt / Invoice</p>
+					</div>
+				</div>
 				<div class="pt-bar">
 					<div class="pt-bar-top">
 						<div class="pt-search-by-wrap" id="pt-search-by-toggle">
@@ -739,7 +803,7 @@ class PurchaseTimeline {
 		}
 
 		// Layout
-		const usedCols = [0,1,2,3,4].filter(c => colNodes[c].length);
+		const usedCols = [0, 1, 2, 3, 4].filter(c => colNodes[c].length);
 		const colMap = {};
 		usedCols.forEach((c, i) => { colMap[c] = i; });
 		const maxRows = Math.max(...colNodes.map(c => c.length), 1);
@@ -751,7 +815,7 @@ class PurchaseTimeline {
 			const ri = colNodes[n.col].indexOf(n);
 			const rowCount = colNodes[n.col].length;
 			const totalH = rowCount * (nodeH + vGap) - vGap;
-			const offsetY = (svgH - padding*2 - totalH) / 2;
+			const offsetY = (svgH - padding * 2 - totalH) / 2;
 			n.x = padding + ci * colW;
 			n.y = padding + offsetY + ri * (nodeH + vGap);
 			n.cx = n.x + nodeW / 2;
@@ -791,17 +855,17 @@ class PurchaseTimeline {
 		// Nodes
 		let nodeSvg = "";
 		nodes.forEach(n => {
-			const lbl = n.label.length > 17 ? n.label.slice(0,16)+"…" : n.label;
-			const sub = (n.sub||"").length > 22 ? n.sub.slice(0,21)+"…" : (n.sub||"");
+			const lbl = n.label.length > 17 ? n.label.slice(0, 16) + "…" : n.label;
+			const sub = (n.sub || "").length > 22 ? n.sub.slice(0, 21) + "…" : (n.sub || "");
 			nodeSvg += `<g class="pt-gnode" data-nid="${n.id}" data-tree-idx="${idx}">
 				<rect x="${n.x}" y="${n.y}" width="${nodeW}" height="${nodeH}" rx="8" fill="${n.bg}" stroke="${n.color}"/>
-				<circle cx="${n.x+14}" cy="${n.y+14}" r="4" fill="${n.color}" opacity=".5"/>
-				<text x="${n.x+26}" y="${n.y+19}" fill="${n.color}" font-weight="700" font-family="inherit">${frappe.utils.escape_html(lbl)}</text>
-				<text class="pt-gsub" x="${n.x+26}" y="${n.y+35}" font-family="inherit">${frappe.utils.escape_html(sub)}</text>
+				<circle cx="${n.x + 14}" cy="${n.y + 14}" r="4" fill="${n.color}" opacity=".5"/>
+				<text x="${n.x + 26}" y="${n.y + 19}" fill="${n.color}" font-weight="700" font-family="inherit">${frappe.utils.escape_html(lbl)}</text>
+				<text class="pt-gsub" x="${n.x + 26}" y="${n.y + 35}" font-family="inherit">${frappe.utils.escape_html(sub)}</text>
 			</g>`;
 		});
 
-		const svgEl = `<svg class="pt-gsvg" viewBox="0 0 ${svgW} ${svgH+20}" width="${svgW}" height="${svgH+20}" xmlns="http://www.w3.org/2000/svg">
+		const svgEl = `<svg class="pt-gsvg" viewBox="0 0 ${svgW} ${svgH + 20}" width="${svgW}" height="${svgH + 20}" xmlns="http://www.w3.org/2000/svg">
 			<g transform="translate(0,16)">${edgeSvg}${nodeSvg}</g>
 			${labelsSvg}
 		</svg>
@@ -839,7 +903,7 @@ class PurchaseTimeline {
 			$node.addClass("pt-gactive");
 			const neighbors = (adj[nid] || new Set());
 			neighbors.forEach(nbid => $svg.find(`[data-nid="${nbid}"]`).addClass("pt-gactive"));
-			$svg.find(".pt-gedge").each(function() {
+			$svg.find(".pt-gedge").each(function () {
 				const ef = $(this).attr("data-ef"), et = $(this).attr("data-et");
 				if (ef === nid || et === nid) $(this).addClass("pt-geactive");
 			});
@@ -916,7 +980,7 @@ class PurchaseTimeline {
 		this.$root.find("#pt-panel-body").html(body);
 
 		// Bind items toggle in panel
-		this.$root.find("#pt-panel-body").find(".pt-items-toggle").off("click").on("click", function() {
+		this.$root.find("#pt-panel-body").find(".pt-items-toggle").off("click").on("click", function () {
 			const $wrap = $(this).next(".pt-items-table-wrap");
 			const open = $wrap.toggleClass("open").hasClass("open");
 			$(this).html((open ? "▾ Hide" : "▸ Show") + ` ${nd.items?.length || 0} item(s)`);
@@ -975,7 +1039,7 @@ class PurchaseTimeline {
 		}
 
 		html += `<div class="pt-dg">`;
-		pairs.filter(([,v]) => v).forEach(([k, v]) => {
+		pairs.filter(([, v]) => v).forEach(([k, v]) => {
 			html += `<div class="pt-di"><span class="lbl">${k}</span><span class="val">${v}</span></div>`;
 		});
 		html += `</div>`;
@@ -1001,9 +1065,9 @@ class PurchaseTimeline {
 				rowFn = it => [it.item_name || it.item_code, it.qty, it.rate ? fmt(it.rate) : "—", it.amount ? fmt(it.amount) : "—"];
 			}
 
-			html += `<table class="pt-items-tbl"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>`;
+			html += `<table class="pt-items-tbl"><thead><tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>`;
 			nd.items.forEach(it => {
-				html += `<tr>${rowFn(it).map(v=>`<td>${v ?? "—"}</td>`).join("")}</tr>`;
+				html += `<tr>${rowFn(it).map(v => `<td>${v ?? "—"}</td>`).join("")}</tr>`;
 			});
 			html += `</tbody></table></div>`;
 		}
