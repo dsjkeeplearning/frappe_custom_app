@@ -2321,7 +2321,7 @@
  },
  {
   "charts": [],
-  "content": "[{\"id\":\"IZ85s3T5xJ\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Procurement &amp; Payment</span><br>\",\"col\":12}},{\"id\":\"Z7mqltBysI\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Material Request\",\"col\":3}},{\"id\":\"FrTYxcxZ6B\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"All Material Request\",\"col\":3}},{\"id\":\"NtPQNH4cJ-\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"KGbMxI8bFI\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New RFQ\",\"col\":3}},{\"id\":\"v4F2SVnb_J\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"All RFQ\",\"col\":3}},{\"id\":\"AB_TtTjL3y\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"T_PR3Nl5kY\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Supplier Quotation\",\"col\":3}},{\"id\":\"UPnVpRhruf\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"All Supplier Quotation\",\"col\":3}},{\"id\":\"Lp50x3iViC\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"4jq3PunVT-\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Purchase Order\",\"col\":3}},{\"id\":\"6J3ckdEzvY\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"All Purchase Order\",\"col\":3}},{\"id\":\"AuV9jlMjLm\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ktx77x3etV\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Purchase Receipt\",\"col\":3}},{\"id\":\"ZkVOR8Vx9T\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"All Purchase Receipt\",\"col\":3}},{\"id\":\"cHzDe20FoR\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"8BO1EbDQfr\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Purchase Invoice\",\"col\":3}},{\"id\":\"SnbqlY0puz\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"All Purchase Invoice\",\"col\":3}},{\"id\":\"HyQGQbZc2E\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"6zl4ZriNTw\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Payment\",\"col\":3}},{\"id\":\"m7XEA5LCwG\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"All Payment\",\"col\":3}}]",
+  "content": "[{\"id\":\"IZ85s3T5xJ\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Procurement &amp; Payment</span><br>\",\"col\":12}},{\"id\":\"Z7mqltBysI\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Material Request\",\"col\":3}},{\"id\":\"FrTYxcxZ6B\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"All Material Request\",\"col\":3}},{\"id\":\"NtPQNH4cJ-\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"KGbMxI8bFI\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New RFQ\",\"col\":3}},{\"id\":\"v4F2SVnb_J\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"All RFQ\",\"col\":3}},{\"id\":\"AB_TtTjL3y\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"T_PR3Nl5kY\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Supplier Quotation\",\"col\":3}},{\"id\":\"UPnVpRhruf\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"All Supplier Quotation\",\"col\":3}},{\"id\":\"Lp50x3iViC\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"4jq3PunVT-\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Purchase Order\",\"col\":3}},{\"id\":\"6J3ckdEzvY\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"All Purchase Order\",\"col\":3}},{\"id\":\"AuV9jlMjLm\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ktx77x3etV\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Purchase Receipt\",\"col\":3}},{\"id\":\"ZkVOR8Vx9T\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"All Purchase Receipt\",\"col\":3}},{\"id\":\"cHzDe20FoR\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"8BO1EbDQfr\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Purchase Invoice\",\"col\":3}},{\"id\":\"SnbqlY0puz\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"All Purchase Invoice\",\"col\":3}},{\"id\":\"HyQGQbZc2E\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"6zl4ZriNTw\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Payment\",\"col\":3}},{\"id\":\"m7XEA5LCwG\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"All Payment\",\"col\":3}},{\"id\":\"fHeDnBRbeK\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"aSefP426cO\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Purchase Timeline</b></span>\",\"col\":12}},{\"id\":\"oT0zSqxQAn\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Purchase Timeline\",\"col\":3}}]",
   "custom_blocks": [],
   "docstatus": 0,
   "doctype": "Workspace",
@@ -2332,7 +2332,7 @@
   "is_hidden": 0,
   "label": "Procurement & Payment",
   "links": [],
-  "modified": "2026-01-26 13:47:21.482948",
+  "modified": "2026-06-13 15:44:09.147496",
   "module": "HR",
   "name": "Procurement & Payment",
   "number_cards": [],
@@ -2407,6 +2407,23 @@
     "restrict_to_domain": null,
     "stats_filter": "[]",
     "type": "DocType",
+    "url": null
+   },
+   {
+    "color": "Grey",
+    "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "Purchase Timeline",
+    "link_to": "purchase-timeline",
+    "parent": "Procurement & Payment",
+    "parentfield": "shortcuts",
+    "parenttype": "Workspace",
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "Page",
     "url": null
    },
    {
