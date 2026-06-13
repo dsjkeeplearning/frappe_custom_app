@@ -6,21 +6,44 @@ from frappe import _
 # PERMISSION HELPERS
 # ─────────────────────────────────────────────────────────────────
 
-def _get_permitted_companies():
-    if "System Manager" in frappe.get_roles(frappe.session.user):
-        return [r.name for r in frappe.db.sql(
-            "SELECT name FROM `tabCompany` ORDER BY name", as_dict=True
-        )]
-    from frappe.permissions import get_user_permissions
-    permitted = get_user_permissions(frappe.session.user).get("Company", [])
-    names = [p.get("doc") for p in permitted if p.get("doc")]
-    if not names:
-        return []
-    placeholders = ", ".join(["%s"] * len(names))
+def _all_companies():
     return [r.name for r in frappe.db.sql(
-        f"SELECT name FROM `tabCompany` WHERE name IN ({placeholders}) ORDER BY name",
-        names, as_dict=True
+        "SELECT name FROM `tabCompany` ORDER BY name", as_dict=True
     )]
+
+
+def _get_permitted_companies():
+    """
+    Returns (companies_list, lock_company).
+
+    System Manager   → all companies, lock=False
+    Institution Head → User-Permission-scoped companies, lock=True
+                       BUT if no user permissions configured → all companies, lock=False
+    Others           → blocked at page level (roles config); raises PermissionError
+    """
+    roles = frappe.get_roles(frappe.session.user)
+
+    if "System Manager" in roles:
+        return _all_companies(), False
+
+    if "Institution Head" in roles:
+        from frappe.permissions import get_user_permissions
+        permitted = get_user_permissions(frappe.session.user).get("Company", [])
+        names = [p.get("doc") for p in permitted if p.get("doc")]
+
+        if not names:
+            # No user permissions configured → grant access to all companies
+            return _all_companies(), False
+
+        placeholders = ", ".join(["%s"] * len(names))
+        companies = [r.name for r in frappe.db.sql(
+            f"SELECT name FROM `tabCompany` WHERE name IN ({placeholders}) ORDER BY name",
+            names, as_dict=True
+        )]
+        return companies, True  # locked to their permitted set
+
+    # Should not be reachable given page roles config, but be safe
+    frappe.throw(_("Not permitted"), frappe.PermissionError)
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -29,8 +52,7 @@ def _get_permitted_companies():
 
 @frappe.whitelist()
 def get_filter_options():
-    companies = _get_permitted_companies()
-    is_sm = "System Manager" in frappe.get_roles(frappe.session.user)
+    companies, lock_company = _get_permitted_companies()
 
     cost_centers = frappe.db.sql(
         "SELECT name FROM `tabCost Center` WHERE is_group=0 ORDER BY name", as_dict=True
@@ -49,7 +71,7 @@ def get_filter_options():
         "suppliers": [r.name for r in suppliers],
         "mr_statuses": mr_statuses,
         "po_statuses": po_statuses,
-        "lock_company": not is_sm,
+        "lock_company": lock_company,
     }
 
 
@@ -546,17 +568,40 @@ def get_procurement_tree(
     """
     Build a tree: MR → RFQ → SQ → PO → (PR + PI)
     Supports filtering from any document in the chain.
+    Company access is enforced server-side based on role.
     """
+
+    # ── Enforce company access server-side ─────────────────────────
+    permitted_companies, lock_company = _get_permitted_companies()
+
+    if lock_company:
+        # Institution Head with user permissions set:
+        # validate any explicitly passed company, then scope all queries
+        if company and company not in permitted_companies:
+            frappe.throw(_("Not permitted to access company: {0}").format(company), frappe.PermissionError)
+        # If no company passed, scope to all permitted companies
+        effective_companies = permitted_companies
+    else:
+        # System Manager or Institution Head with no user permissions (all companies)
+        effective_companies = None  # None = no company filter applied
 
     mr_names = set()
 
     # ── Resolve starting MR names based on filter ──────────────────
 
     if material_request:
+        # Validate the MR belongs to a permitted company when locked
+        if lock_company:
+            mr_company = frappe.db.get_value("Material Request", material_request, "company")
+            if mr_company not in permitted_companies:
+                frappe.throw(_("Not permitted"), frappe.PermissionError)
         mr_names.add(material_request)
 
     elif purchase_order:
-        # Backtrack: PO → MR
+        if lock_company:
+            po_company = frappe.db.get_value("Purchase Order", purchase_order, "company")
+            if po_company not in permitted_companies:
+                frappe.throw(_("Not permitted"), frappe.PermissionError)
         items = frappe.db.sql("""
             SELECT DISTINCT material_request FROM `tabPurchase Order Item`
             WHERE parent = %s AND material_request IS NOT NULL AND material_request != ''
@@ -568,7 +613,10 @@ def get_procurement_tree(
             return _build_tree_from_po(purchase_order)
 
     elif purchase_invoice:
-        # Backtrack: PI → PO → MR
+        if lock_company:
+            pi_company = frappe.db.get_value("Purchase Invoice", purchase_invoice, "company")
+            if pi_company not in permitted_companies:
+                frappe.throw(_("Not permitted"), frappe.PermissionError)
         po_names = frappe.db.sql("""
             SELECT DISTINCT purchase_order FROM `tabPurchase Invoice Item`
             WHERE parent = %s AND purchase_order IS NOT NULL AND purchase_order != ''
@@ -582,7 +630,10 @@ def get_procurement_tree(
                 mr_names.add(r.material_request)
 
     elif purchase_receipt:
-        # Backtrack: PR → PO → MR
+        if lock_company:
+            pr_company = frappe.db.get_value("Purchase Receipt", purchase_receipt, "company")
+            if pr_company not in permitted_companies:
+                frappe.throw(_("Not permitted"), frappe.PermissionError)
         po_names = frappe.db.sql("""
             SELECT DISTINCT purchase_order FROM `tabPurchase Receipt Item`
             WHERE parent = %s AND purchase_order IS NOT NULL AND purchase_order != ''
@@ -596,7 +647,10 @@ def get_procurement_tree(
                 mr_names.add(r.material_request)
 
     elif supplier_quotation:
-        # Backtrack: SQ → MR
+        if lock_company:
+            sq_company = frappe.db.get_value("Supplier Quotation", supplier_quotation, "company")
+            if sq_company not in permitted_companies:
+                frappe.throw(_("Not permitted"), frappe.PermissionError)
         items = frappe.db.sql("""
             SELECT DISTINCT material_request FROM `tabSupplier Quotation Item`
             WHERE parent = %s AND material_request IS NOT NULL AND material_request != ''
@@ -605,7 +659,10 @@ def get_procurement_tree(
             mr_names.add(r.material_request)
 
     elif rfq:
-        # Backtrack: RFQ → MR
+        if lock_company:
+            rfq_company = frappe.db.get_value("Request for Quotation", rfq, "company")
+            if rfq_company not in permitted_companies:
+                frappe.throw(_("Not permitted"), frappe.PermissionError)
         items = frappe.db.sql("""
             SELECT DISTINCT material_request FROM `tabRequest for Quotation Item`
             WHERE parent = %s AND material_request IS NOT NULL AND material_request != ''
@@ -616,20 +673,25 @@ def get_procurement_tree(
     else:
         # No doc filter: list MRs based on attribute filters
         filters = {"docstatus": ["!=", 2]}
+
+        # Company filter: use explicit value if provided (already validated above),
+        # otherwise scope to permitted companies when locked
         if company:
             filters["company"] = company
+        elif effective_companies is not None:
+            # Lock_company=True and no specific company passed → scope to all permitted
+            filters["company"] = ["in", effective_companies]
+
         if cost_center:
             filters["custom_cost_center"] = cost_center
         if mr_status:
             filters["workflow_state"] = mr_status
-        if date_from:
+        if date_from and date_to:
+            filters["transaction_date"] = ["between", [date_from, date_to]]
+        elif date_from:
             filters["transaction_date"] = [">=", date_from]
-        if date_to:
-            filters.setdefault("transaction_date", ["<=", date_to])
-            if isinstance(filters["transaction_date"], list) and filters["transaction_date"][0] == ">=":
-                filters["transaction_date"] = ["between", [date_from, date_to]]
-            else:
-                filters["transaction_date"] = ["<=", date_to]
+        elif date_to:
+            filters["transaction_date"] = ["<=", date_to]
 
         mrs = frappe.get_all(
             "Material Request",

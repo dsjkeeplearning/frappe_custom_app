@@ -2332,7 +2332,7 @@
   "is_hidden": 0,
   "label": "Procurement & Payment",
   "links": [],
-  "modified": "2026-06-13 15:44:09.147496",
+  "modified": "2026-06-13 16:16:45.488173",
   "module": "HR",
   "name": "Procurement & Payment",
   "number_cards": [],
@@ -2388,6 +2388,12 @@
     "parentfield": "roles",
     "parenttype": "Workspace",
     "role": "System Manager"
+   },
+   {
+    "parent": "Procurement & Payment",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "Institution Head"
    }
   ],
   "sequence_id": 3.0,
