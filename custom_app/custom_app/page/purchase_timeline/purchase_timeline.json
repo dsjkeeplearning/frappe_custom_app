@@ -1,0 +1,26 @@
+{
+ "content": null,
+ "creation": "2026-06-12 21:50:57.045026",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-06-13 16:09:49.835819",
+ "modified_by": "Administrator",
+ "module": "Custom App",
+ "name": "purchase-timeline",
+ "owner": "Administrator",
+ "page_name": "purchase-timeline",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Institution Head"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 1,
+ "title": "Purchase Timeline"
+}
