@@ -52,7 +52,8 @@ function toggle_request_verifier(frm) {
             const in_list = r.message && r.message.length > 0;
             frm.set_df_property("custom_request_verifier", "hidden", in_list ? 0 : 1);
             frm.set_df_property("custom_request_verifier", "reqd",   in_list ? 1 : 0);
-            if (!in_list) {
+            // Only clear when there is actually a value to clear, and never mutate
+            if (!in_list && frm.doc.custom_request_verifier && frm.doc.docstatus === 0) {
                 frm.set_value("custom_request_verifier", null);
             }
         }
