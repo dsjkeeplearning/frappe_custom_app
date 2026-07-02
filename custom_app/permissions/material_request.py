@@ -15,10 +15,15 @@ def material_request_permission_query(user):
             "`tabMaterial Request`.`workflow_state` = 'Approved by Manager'"
         )
 
-    # Expense Approver → only assigned to him (User ID stored)
+    # Expense Approver → requests where he is the approver OR the verifier
     if "Expense Approver" in roles:
         conditions.append(
             "`tabMaterial Request`.`custom_request_approver` = {}".format(
+                frappe.db.escape(user)
+            )
+        )
+        conditions.append(
+            "`tabMaterial Request`.`custom_request_verifier` = {}".format(
                 frappe.db.escape(user)
             )
         )
