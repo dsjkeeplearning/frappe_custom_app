@@ -77,6 +77,9 @@ doc_events = {
     },
     "Supplier": {
         "before_insert": "custom_app.api.supplier.set_vendor_code"
+    },
+    "Purchase Invoice": {
+        "validate": "custom_app.api.purchase_invoice.validate_pi_items"
     }
 }
 

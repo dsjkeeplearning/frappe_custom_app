@@ -3,6 +3,7 @@ from frappe import _
 
 def validate_po_items(doc, method):
     for row in doc.items:
+
         # 1️⃣ Material Request must be present
         if not row.material_request:
             frappe.throw(
@@ -35,4 +36,20 @@ def validate_po_items(doc, method):
                       "does not match Purchase Order Supplier ({2}).")
                     .format(row.idx, default_supplier, doc.supplier)
                 )
-            row.cost_center = doc.cost_center
+
+        # 3️⃣ Expense Account must match the Material Request row's Expense Account
+        if row.material_request_item:
+            mr_expense_account = frappe.db.get_value(
+                "Material Request Item",
+                row.material_request_item,
+                "expense_account"
+            )
+
+            if mr_expense_account and row.expense_account != mr_expense_account:
+                frappe.throw(
+                    _("Row {0}: Expense Account ({1}) does not match the Expense Account "
+                      "({2}) set in Material Request {3}.")
+                    .format(row.idx, row.expense_account, mr_expense_account, row.material_request)
+                )
+
+        row.cost_center = doc.cost_center
