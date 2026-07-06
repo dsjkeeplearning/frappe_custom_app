@@ -1,9 +1,11 @@
 import frappe
 from frappe import _
+from frappe.utils import flt
 from custom_app.api.notification_utils import (
     get_user_from_employee,
     safe_sendmail,
 )
+
 
 def update_item_cost_center(doc, method):
     """
@@ -250,3 +252,51 @@ def validate_request_verifier(doc, method=None):
         # Cost center not in the list — verifier must not be set
         if doc.custom_request_verifier:
             doc.custom_request_verifier = None
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# C.  Supplier Quotation — validate amount against linked Material Request (PR)
+# ──────────────────────────────────────────────────────────────────────────────
+
+def validate_quotation_against_material_request(doc, method=None):
+    """
+    Triggered by doc_events → validate on Supplier Quotation.
+    For every item row that references a Material Request (Purchase Requisition),
+    ensure the quoted amount does not exceed the approved PR amount for that item.
+    """
+    for row in doc.items:
+        if not row.material_request:
+            continue
+
+        mr_amount = get_material_request_item_amount(row)
+
+        if flt(row.amount) > flt(mr_amount):
+            frappe.throw(
+                _(
+                    "Supplier quotation amount cannot exceed the approved Purchase "
+                    "Requisition (PR) amount. Please revise the quotation or create a new PR."
+                )
+            )
+
+
+def get_material_request_item_amount(row):
+    """
+    Resolve the approved amount from the source Material Request Item.
+    Prefers the exact linked row (material_request_item) and falls back
+    to matching by item_code within that Material Request.
+    """
+    if row.material_request_item:
+        amount = frappe.db.get_value(
+            "Material Request Item", row.material_request_item, "amount"
+        )
+        if amount is not None:
+            return amount
+
+    return (
+        frappe.db.get_value(
+            "Material Request Item",
+            {"parent": row.material_request, "item_code": row.item_code},
+            "amount",
+        )
+        or 0
+    )

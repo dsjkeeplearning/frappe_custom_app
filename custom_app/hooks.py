@@ -49,7 +49,8 @@ doc_events = {
         ),
     },
     "Supplier Quotation": {
-        "before_save": "custom_app.api.supplier_quotation.update_item_cost_center"
+        "before_save": "custom_app.api.supplier_quotation.update_item_cost_center",
+        "validate": "custom_app.api.material_request.validate_quotation_against_material_request",
     },
     "Purchase Order": {
         "before_save": [
