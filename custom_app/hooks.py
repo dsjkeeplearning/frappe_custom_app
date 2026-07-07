@@ -86,7 +86,8 @@ doc_events = {
 
 permission_query_conditions = {
     "Material Request": "custom_app.permissions.material_request.material_request_permission_query",
-    "Expense Claim": "custom_app.permissions.expense_claim.expense_claim_permission_query"
+    "Expense Claim": "custom_app.permissions.expense_claim.expense_claim_permission_query",
+    "WB Task": "custom_app.permissions.wb_task.wb_task_permission_query"
 }
 
 doctype_js = {
