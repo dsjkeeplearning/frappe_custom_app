@@ -97,9 +97,9 @@ doctype_js = {
 }
 
 scheduler_events = {
-    "daily": [
-        "custom_app.tasks.end_probation.allocate_earned_leaves_on_probation_end"
-    ],
+    # "daily": [
+    #     "custom_app.tasks.end_probation.allocate_earned_leaves_on_probation_end"
+    # ],
     "cron": {
         "0 3 1 * *": [
             "custom_app.tasks.probation_reminder.send_probation_end_alerts"
