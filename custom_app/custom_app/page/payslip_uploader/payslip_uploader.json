@@ -1,0 +1,23 @@
+{
+ "content": null,
+ "creation": "2026-07-22 15:17:55.624833",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-07-22 15:20:03.919647",
+ "modified_by": "Administrator",
+ "module": "Custom App",
+ "name": "payslip-uploader",
+ "owner": "Administrator",
+ "page_name": "payslip-uploader",
+ "roles": [
+  {
+   "role": "System Manager"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Paysquare Payslip Uploader"
+}
