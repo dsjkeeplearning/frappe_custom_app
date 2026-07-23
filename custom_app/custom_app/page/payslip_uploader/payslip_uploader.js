@@ -153,9 +153,21 @@ class PayslipUploader {
 			method: 'custom_app.custom_app.page.payslip_uploader.payslip_uploader.start_import',
 			args: { file_url, batch_type, zip_password },
 			freeze: true,
-			freeze_message: 'Starting the import job...',
+			freeze_message: 'Processing the batch...',
 			callback: (r) => {
-				if (!r.message || !r.message.job_key) {
+				if (!r.message) {
+					this.render_status(`<div class="alert alert-danger">Could not start the import job.</div>`);
+					return;
+				}
+				// Small batches are processed synchronously on the server --
+				// the summary comes back right away, no polling needed.
+				if (r.message.sync) {
+					this.render_status('');
+					this.render_results(r.message.summary);
+					this.unfreeze_fields({ reset: true });
+					return;
+				}
+				if (!r.message.job_key) {
 					this.render_status(`<div class="alert alert-danger">Could not start the import job.</div>`);
 					return;
 				}
