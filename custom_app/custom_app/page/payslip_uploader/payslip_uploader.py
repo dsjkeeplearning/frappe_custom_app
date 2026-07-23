@@ -96,7 +96,22 @@ def get_import_status(job_key):
 
 	status = _get_job_status(job_key)
 	if status is None:
-		frappe.throw("Unknown or expired job. Please start a new batch.")
+		# The cached entry expired (or the key is bogus). Don't throw --
+		# that leaves the UI frozen on a job that can never resolve.
+		# Log it as a failure and return a "failed" status so the client
+		# clears its stored job_key and lets the user start a new batch.
+		frappe.log_error(
+			title="Paysquare Import: Job Expired",
+			message=f"Job {job_key} was polled but its status is no longer in cache "
+			f"(expired after {JOB_CACHE_EXPIRY}s or never existed). Marked as failed.",
+		)
+		return {
+			"status": "failed",
+			"processed": 0,
+			"total": None,
+			"summary": None,
+			"error": "This batch's tracking info expired before it could be confirmed. Start a new batch.",
+		}
 
 	return status
 
