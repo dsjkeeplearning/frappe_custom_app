@@ -113,7 +113,7 @@ scheduler_events = {
 fixtures = [
     {
         "doctype": "Workspace", 
-        "filters": [["name", "in", ["Recruitment", "Config Email", "Expense & Request", "Procurement & Payment", "Budgeting", "Vendor & Assets", "Assets" , "Users", "HR"]]]
+        "filters": [["name", "in", ["Recruitment", "Config Email", "Expense & Request", "Procurement & Payment", "Budgeting", "Vendor & Assets", "Assets" , "Users", "HR","Payroll"]]]
     },
     {
         "doctype": "Workflow"

@@ -42,6 +42,11 @@ ALLOWED_ROLES = ["System Manager", "HR Manager", "HR User"]
 JOB_CACHE_PREFIX = "payslip_import_job::"
 JOB_CACHE_EXPIRY = 60 * 60 * 24  # 24 hours -- generous, just to avoid stale entries lingering forever
 
+# Batches at or below this many PDFs are processed synchronously in the
+# web request itself (fast enough, and the user gets results instantly);
+# anything bigger goes through the background worker as before.
+SYNC_PROCESSING_LIMIT = 10
+
 
 # ---------------------------------------------------------------------------
 # whitelisted endpoints
@@ -65,6 +70,30 @@ def start_import(file_url, batch_type, zip_password):
 
 	file_doc = frappe.get_doc("File", {"file_url": file_url})
 	zip_path = file_doc.get_full_path()
+
+	# Small batch? Do it right here in the request -- no queue, no polling,
+	# results come back instantly. Falls back to the background path if the
+	# zip can't even be counted (process_zip_file will surface the real error
+	# through the job flow).
+	try:
+		total = count_pdf_entries(zip_path)
+	except Exception:
+		total = None
+
+	if total is not None and total <= SYNC_PROCESSING_LIMIT:
+		try:
+			summary = process_zip_file(zip_path, batch_type, zip_password)
+			return {"sync": True, "summary": summary}
+		except Exception:
+			frappe.log_error(title="Paysquare Import: Sync Run Failed", message=frappe.get_traceback())
+			frappe.throw("The batch failed while processing. See the Error Log doctype for details.")
+		finally:
+			frappe.db.commit()
+			try:
+				frappe.delete_doc("File", file_doc.name, ignore_permissions=True)
+				frappe.db.commit()
+			except Exception:
+				frappe.db.rollback()
 
 	job_key = frappe.generate_hash(length=12)
 	_set_job_status(job_key, {
@@ -96,7 +125,22 @@ def get_import_status(job_key):
 
 	status = _get_job_status(job_key)
 	if status is None:
-		frappe.throw("Unknown or expired job. Please start a new batch.")
+		# The cached entry expired (or the key is bogus). Don't throw --
+		# that leaves the UI frozen on a job that can never resolve.
+		# Log it as a failure and return a "failed" status so the client
+		# clears its stored job_key and lets the user start a new batch.
+		frappe.log_error(
+			title="Paysquare Import: Job Expired",
+			message=f"Job {job_key} was polled but its status is no longer in cache "
+			f"(expired after {JOB_CACHE_EXPIRY}s or never existed). Marked as failed.",
+		)
+		return {
+			"status": "failed",
+			"processed": 0,
+			"total": None,
+			"summary": None,
+			"error": "This batch's tracking info expired before it could be confirmed. Start a new batch.",
+		}
 
 	return status
 
