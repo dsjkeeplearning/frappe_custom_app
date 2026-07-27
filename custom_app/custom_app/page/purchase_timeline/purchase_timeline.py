@@ -71,8 +71,59 @@ def get_filter_options():
         "suppliers": [r.name for r in suppliers],
         "mr_statuses": mr_statuses,
         "po_statuses": po_statuses,
+        "approval_statuses": _get_approval_statuses(),
         "lock_company": lock_company,
     }
+
+
+# "Search by" type key -> doctype, for the doctypes that actually carry a
+# workflow (workflow_state). Only these types should ever offer the
+# Approval Status filter on the frontend -- Purchase Receipt, Supplier
+# Quotation and RFQ have no workflow attached here.
+_WORKFLOW_TYPE_DOCTYPE_MAP = {
+    "mr": "Material Request",
+    "po": "Purchase Order",
+    "pi": "Purchase Invoice",
+}
+
+
+def _get_approval_statuses():
+    """
+    Distinct workflow_state (approval status) values actually in use,
+    grouped BY "Search by" type key (mr / po / pi).
+
+    Only doctypes with a workflow attached are included, and only the
+    states that are actually in use for that specific doctype are
+    returned -- this powers a per-type "Approval Status" filter on the
+    frontend instead of one flat, type-agnostic list.
+
+    Returns e.g.:
+        {
+            "mr": ["Approved by Manager", "Draft", "Rejected", "Verified"],
+            "po": ["Approved", "Draft", "Rejected"],
+            "pi": ["Draft", "Submitted"],
+        }
+    A type key is omitted entirely if that doctype has no workflow_state
+    column, or has the column but no non-empty values in use.
+    """
+    result = {}
+    for type_key, doctype in _WORKFLOW_TYPE_DOCTYPE_MAP.items():
+        # workflow_state is a standard field on workflow-enabled doctypes;
+        # guard in case a given doctype has no workflow attached here.
+        if not frappe.db.has_column(doctype, "workflow_state"):
+            continue
+        rows = frappe.db.sql(
+            f"""
+            SELECT DISTINCT workflow_state
+            FROM `tab{doctype}`
+            WHERE workflow_state IS NOT NULL AND workflow_state != ''
+            """,
+            as_dict=True,
+        )
+        states = sorted({r.workflow_state for r in rows})
+        if states:
+            result[type_key] = states
+    return result
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -561,6 +612,11 @@ def get_procurement_tree(
     supplier=None,
     mr_status=None,
     po_status=None,
+    pi_status=None,
+    pr_status=None,
+    sq_status=None,
+    rfq_status=None,
+    approval_status=None,
     date_from=None,
     date_to=None,
     limit=50,
@@ -685,7 +741,9 @@ def get_procurement_tree(
         if cost_center:
             filters["custom_cost_center"] = cost_center
         if mr_status:
-            filters["workflow_state"] = mr_status
+            # Generic "Status" filter → the ERPNext status field. Workflow/
+            # approval state has its own dedicated filter (approval_status).
+            filters["status"] = mr_status
         if date_from and date_to:
             filters["transaction_date"] = ["between", [date_from, date_to]]
         elif date_from:
@@ -707,10 +765,49 @@ def get_procurement_tree(
     trees = []
     for mr_name in list(mr_names)[:int(limit)]:
         try:
-            tree = _build_tree_for_mr(mr_name, supplier_filter=supplier, po_status_filter=po_status)
+            tree = _build_tree_for_mr(
+                mr_name,
+                supplier_filter=supplier,
+                po_status_filter=po_status,
+                rfq_status_filter=rfq_status,
+                sq_status_filter=sq_status,
+                pr_status_filter=pr_status,
+                pi_status_filter=pi_status,
+            )
+
+            # The MR-listing query above only filters by mr_status -- it has
+            # no idea whether this MR's children (PO/PI/PR/SQ/RFQ) match the
+            # selected Status. _build_tree_for_mr already prunes non-matching
+            # siblings out of each list, but that alone can leave a card on
+            # screen with an empty PO/PI/etc. list. When a status filter is
+            # active for the type being searched, drop the whole card here
+            # unless it actually contains a matching document -- this is the
+            # "only records with that status should show" behaviour.
+            if po_status and not tree.get("purchase_orders"):
+                continue
+            if rfq_status and not tree.get("rfqs"):
+                continue
+            if sq_status and not tree.get("supplier_quotations"):
+                continue
+            if pr_status and not any(
+                po.get("purchase_receipts") for po in tree.get("purchase_orders", [])
+            ):
+                continue
+            if pi_status and not any(
+                po.get("purchase_invoices") for po in tree.get("purchase_orders", [])
+            ):
+                continue
+
             trees.append(tree)
         except Exception as e:
             frappe.log_error(f"Error building tree for MR {mr_name}: {e}")
+
+    # ── Approval Status (workflow_state) filter ────────────────────
+    # Cross-cutting: keep a timeline if ANY document in it (MR, PO, or PI)
+    # is in the selected workflow state, so the full chain stays visible
+    # for context rather than hiding sibling documents.
+    if approval_status:
+        trees = [t for t in trees if _tree_has_workflow_state(t, approval_status)]
 
     # Sort by MR date descending
     trees.sort(key=lambda x: x.get("transaction_date") or "", reverse=True)
@@ -721,30 +818,67 @@ def get_procurement_tree(
     }
 
 
-def _build_tree_for_mr(mr_name, supplier_filter=None, po_status_filter=None):
+def _tree_has_workflow_state(tree, state):
+    """True if the MR or any of its POs / PIs is in the given workflow_state."""
+    if tree.get("workflow_state") == state:
+        return True
+    for po in tree.get("purchase_orders", []):
+        if po.get("workflow_state") == state:
+            return True
+        for pi in po.get("purchase_invoices", []):
+            if pi.get("workflow_state") == state:
+                return True
+    return False
+
+
+def _build_tree_for_mr(
+    mr_name,
+    supplier_filter=None,
+    po_status_filter=None,
+    rfq_status_filter=None,
+    sq_status_filter=None,
+    pr_status_filter=None,
+    pi_status_filter=None,
+):
     """Build complete procurement tree rooted at a Material Request."""
     mr_data = _get_mr_details(mr_name)
 
-    # RFQs
-    rfqs = _get_rfqs_for_mr(mr_name)
-    rfq_names = [r["name"] for r in rfqs]
+    # RFQs -- keep the FULL unfiltered list of names for the SQ lookup below
+    # (an SQ can be linked via an RFQ that itself doesn't match the status
+    # filter; filtering rfq_names first would silently break that link).
+    rfqs_all = _get_rfqs_for_mr(mr_name)
+    rfq_names_all = [r["name"] for r in rfqs_all]
+    rfqs = rfqs_all
+    if rfq_status_filter:
+        rfqs = [r for r in rfqs_all if r["status"] == rfq_status_filter]
 
     # Supplier Quotations
-    sqs = _get_supplier_quotations_for_mr(mr_name, rfq_names)
+    sqs = _get_supplier_quotations_for_mr(mr_name, rfq_names_all)
     if supplier_filter:
         sqs = [s for s in sqs if s["supplier"] == supplier_filter]
+    if sq_status_filter:
+        sqs = [s for s in sqs if s["status"] == sq_status_filter]
 
     # Purchase Orders
     pos = _get_pos_for_mr(mr_name)
     if supplier_filter:
         pos = [p for p in pos if p["supplier"] == supplier_filter]
     if po_status_filter:
-        pos = [p for p in pos if p["workflow_state"] == po_status_filter or p["status"] == po_status_filter]
+        # Generic "Status" filter → the ERPNext status field only. Approval
+        # (workflow_state) is handled by the separate approval_status filter.
+        pos = [p for p in pos if p["status"] == po_status_filter]
 
-    # For each PO, get PR and PI
+    # For each PO, get PR and PI, filtering each by its own Status when the
+    # "Search by" type is Purchase Receipt / Purchase Invoice.
     for po in pos:
-        po["purchase_receipts"] = _get_purchase_receipts_for_po(po["name"])
-        po["purchase_invoices"] = _get_purchase_invoices_for_po(po["name"])
+        prs = _get_purchase_receipts_for_po(po["name"])
+        pis = _get_purchase_invoices_for_po(po["name"])
+        if pr_status_filter:
+            prs = [pr for pr in prs if pr["status"] == pr_status_filter]
+        if pi_status_filter:
+            pis = [pi for pi in pis if pi["status"] == pi_status_filter]
+        po["purchase_receipts"] = prs
+        po["purchase_invoices"] = pis
 
     mr_data["rfqs"] = rfqs
     mr_data["supplier_quotations"] = sqs

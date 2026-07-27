@@ -49,6 +49,7 @@ doc_events = {
         ),
     },
     "Supplier Quotation": {
+        "before_insert": "custom_app.api.supplier_quotation.set_default_order_status",
         "before_save": "custom_app.api.supplier_quotation.update_item_cost_center",
         "validate": "custom_app.api.material_request.validate_quotation_against_material_request",
     },
@@ -56,7 +57,9 @@ doc_events = {
         "before_save": [
             "custom_app.api.purchase_order.validate_po_items",
             "custom_app.api.letter_head.set_letter_head"
-        ]
+        ],
+        "on_submit": "custom_app.api.supplier_quotation.update_ordered_qty_on_po_submit",
+        "on_cancel": "custom_app.api.supplier_quotation.update_ordered_qty_on_po_cancel"
     },
     "Purchase Receipt": {
         "before_save": "custom_app.api.letter_head.set_letter_head",

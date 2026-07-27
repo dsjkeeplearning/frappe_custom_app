@@ -4,7 +4,7 @@
  "docstatus": 0,
  "doctype": "Page",
  "idx": 0,
- "modified": "2026-07-22 15:20:03.919647",
+ "modified": "2026-07-24 16:10:30.017793",
  "modified_by": "Administrator",
  "module": "Custom App",
  "name": "payslip-uploader",
@@ -13,6 +13,9 @@
  "roles": [
   {
    "role": "System Manager"
+  },
+  {
+   "role": "HR Manager"
   }
  ],
  "script": null,
