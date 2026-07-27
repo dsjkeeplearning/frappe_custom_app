@@ -52,20 +52,16 @@ class PurchaseTimeline {
 			display: flex; align-items: center; gap: 8px;
 			background: #f7f8fa; border: 1px solid #e4e7ec;
 			border-radius: 8px; padding: 6px 12px;
-			cursor: pointer; transition: border-color .15s, background .15s;
 			user-select: none;
 		}
-		.pt-search-by-wrap:hover { border-color: #7f56d9; background: #faf8ff; }
 		.pt-search-by-label { font-size: 12px; font-weight: 600; color: #667085; }
 		.pt-search-by-val { font-size: 12px; font-weight: 700; color: #7f56d9; }
-		.pt-search-by-chevron { font-size: 10px; color: #98a2b3; margin-left: 2px; transition: transform .2s; }
-		.pt-search-by-chevron.open { transform: rotate(180deg); }
 
+		/* Filter row is always visible (non-collapsible) */
 		.pt-filters-expanded {
-			display: none; margin-top: 10px;
-			padding-top: 10px; border-top: 1px solid #f2f4f7;
+			display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+			margin-top: 10px; padding-top: 10px; border-top: 1px solid #f2f4f7;
 		}
-		.pt-filters-expanded.open { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
 
 		.pt-fg { display: flex; flex-direction: column; min-width: 140px; flex: 1 1 140px; max-width: 200px; }
 		.pt-fg-sm { flex: 0 1 130px; max-width: 140px; }
@@ -80,6 +76,9 @@ class PurchaseTimeline {
 		.pt-fg .form-control:focus, .pt-fg select:focus, .pt-fg input[type=date]:focus {
 			outline: none; border-color: #7f56d9;
 			box-shadow: 0 0 0 3px rgba(127,86,217,.1);
+		}
+		.pt-fg select:disabled {
+			background: #f5f6f8; color: #98a2b3; cursor: not-allowed;
 		}
 		.pt-fg .frappe-control { margin-bottom: 0; }
 		.pt-fg .frappe-control .control-input-wrapper { padding: 0; }
@@ -380,10 +379,9 @@ class PurchaseTimeline {
 				</div>
 				<div class="pt-bar">
 					<div class="pt-bar-top">
-						<div class="pt-search-by-wrap" id="pt-search-by-toggle">
+						<div class="pt-search-by-wrap">
 							<span class="pt-search-by-label">Search by</span>
 							<span class="pt-search-by-val" id="pt-search-by-val">All</span>
-							<span class="pt-search-by-chevron" id="pt-sb-chev">▼</span>
 						</div>
 						<div id="pt-active-tags" class="pt-active-tags" style="flex:1;"></div>
 						<div class="pt-bar-actions">
@@ -421,13 +419,6 @@ class PurchaseTimeline {
 		this.$dot = this.$root.find("#pt-dot");
 		this.$activeTags = this.$root.find("#pt-active-tags");
 		this.$tooltip = $("#pt-tooltip");
-
-		// Toggle filter expand/collapse
-		this.$root.find("#pt-search-by-toggle").on("click", () => {
-			const $exp = this.$filterRow;
-			const open = $exp.toggleClass("open").hasClass("open");
-			this.$root.find("#pt-sb-chev").toggleClass("open", open);
-		});
 
 		this.$root.find("#pt-clear").on("click", () => this._clearFilters());
 		this.$root.find("#pt-search-btn").on("click", () => this._fetchTree(true));
@@ -509,6 +500,7 @@ class PurchaseTimeline {
 			type,
 			doc: getCtrl("pt-f-doc") || null,
 			status: getRaw("pt-f-status") || null,
+			approval_status: getRaw("pt-f-approval-status") || null,
 			company: getCtrl("pt-f-company") || null,
 			supplier: getCtrl("pt-f-supplier") || null,
 			cost_center: getCtrl("pt-f-cost-center") || null,
@@ -531,7 +523,9 @@ class PurchaseTimeline {
 		if (!Object.keys(p).length) return Promise.resolve(false);
 
 		// Type selector — must fire first so _buildDocControl creates the
-		// correct link control before we try to set_value on it
+		// correct link control before we try to set_value on it, and so the
+		// Status / Approval Status dropdowns get rebuilt for this type before
+		// we set their values below.
 		if (p.type) {
 			this.$filterRow.find("#pt-f-type").val(p.type).trigger("change");
 		}
@@ -541,13 +535,16 @@ class PurchaseTimeline {
 			this.$filterRow.find("#pt-f-status").val(p.status);
 		}
 
+		// Approval Status — only meaningful if the dropdown is enabled for
+		// this type (the "change" handler above already rebuilt/disabled it).
+		if (p.approval_status && !this.$filterRow.find("#pt-f-approval-status").prop("disabled")) {
+			this.$filterRow.find("#pt-f-approval-status").val(p.approval_status);
+		}
+
 		// Date range
 		if (p.date_from) this.$filterRow.find("#pt-f-date-from").val(p.date_from);
 		if (p.date_to) this.$filterRow.find("#pt-f-date-to").val(p.date_to);
 
-		// Auto-open the filter bar so the user can see what's active
-		this.$filterRow.addClass("open");
-		this.$root.find("#pt-sb-chev").addClass("open");
 		const typeLabels = {
 			mr: "Purchase Request", po: "Purchase Order", pi: "Purchase Invoice",
 			pr: "Purchase Receipt", sq: "Supplier Quotation", rfq: "Request for Quotation"
@@ -621,6 +618,11 @@ class PurchaseTimeline {
 	// BUILD FILTERS
 	// ─────────────────────────────────────────────────────────────
 	_buildFilters(opts) {
+		// Per-type map of workflow_state values, e.g. { mr: [...], po: [...], pi: [...] }.
+		// Types not present here (pr, sq, rfq) have no workflow attached, so
+		// the Approval Status filter is disabled whenever one of those is selected.
+		this.approvalStatusesByType = opts.approval_statuses || {};
+
 		let html = "";
 
 		// "Search by" type selector
@@ -639,18 +641,23 @@ class PurchaseTimeline {
 		// Dynamic doc link — shown/updated by type
 		html += `<div class="pt-fg" id="pt-f-doc-wrap"><label class="pt-fl" id="pt-f-doc-label">Document</label><div id="pt-f-doc"></div></div>`;
 
-		// Status
-		const allStatuses = [
-			"Draft", "Submitted", "Pending", "Open", "Ordered", "Issued",
-			"Received", "Partially Ordered", "Partially Received",
-			"To Receive and Bill", "To Receive", "To Bill",
-			"Completed", "Cancelled", "Closed", "Overdue"
-		];
+		// Status — options depend on the selected Type; only statuses that
+		// actually belong to that doctype's status field are shown.
 		html += `<div class="pt-fg pt-fg-sm">
 			<label class="pt-fl">Status</label>
 			<select class="pt-filter" id="pt-f-status">
-				<option value="">Any Status</option>
-				${allStatuses.map(s => `<option value="${s}">${s}</option>`).join("")}
+				${this._statusOptionsHtml("mr")}
+			</select>
+		</div>`;
+
+		// Approval Status (workflow_state) — only applicable to types that
+		// actually have a workflow attached (MR / PO / PI). Options and the
+		// enabled/disabled state are rebuilt whenever Type changes.
+		const initialApprovalList = this.approvalStatusesByType["mr"] || [];
+		html += `<div class="pt-fg pt-fg-sm">
+			<label class="pt-fl">Approval Status</label>
+			<select class="pt-filter" id="pt-f-approval-status" ${!initialApprovalList.length ? "disabled" : ""}>
+				${this._approvalOptionsHtml("mr")}
 			</select>
 		</div>`;
 
@@ -692,6 +699,15 @@ class PurchaseTimeline {
 			this.$filterRow.find("#pt-f-doc-label").text(labels[type] || "Document");
 			this.$filterRow.find("#pt-f-doc").html("");
 			this.$root.find("#pt-search-by-val").text(labels[type] || "All");
+			// Repopulate the Status dropdown with statuses valid for this type,
+			// resetting any prior selection that no longer applies.
+			this.$filterRow.find("#pt-f-status").html(this._statusOptionsHtml(type));
+			// Approval Status only applies to workflow-enabled types (MR/PO/PI).
+			// Repopulate with that type's states and disable when not applicable.
+			const approvalList = this.approvalStatusesByType[type] || [];
+			this.$filterRow.find("#pt-f-approval-status")
+				.html(this._approvalOptionsHtml(type))
+				.prop("disabled", !approvalList.length);
 			this._buildDocControl(type);
 		});
 
@@ -761,13 +777,21 @@ class PurchaseTimeline {
 		const doc = getCtrl("pt-f-doc");
 		const status = getRaw("pt-f-status");
 
+		// Approval Status is only meaningful when the dropdown is enabled
+		// for the current type (i.e. that type actually has a workflow).
+		const $apprSelect = this.$filterRow.find("#pt-f-approval-status");
+		const approvalStatus = $apprSelect.prop("disabled") ? null : getRaw("pt-f-approval-status");
+
 		let company = getCtrl("pt-f-company");
 		if (!company && this.filterOptions?.lock_company && this.filterOptions.companies?.length === 1)
 			company = this.filterOptions.companies[0];
 
-		// Map type + status to correct filter key
+		// Map type + status to correct filter key. Every type now has its
+		// own status key -- previously PI/PR/SQ/RFQ had no key at all, so
+		// picking a Status for those types silently did nothing.
 		const docKey = { mr: "material_request", po: "purchase_order", pi: "purchase_invoice", pr: "purchase_receipt", sq: "supplier_quotation", rfq: "rfq" }[type];
-		const statusKey = (type === "mr") ? "mr_status" : (type === "po") ? "po_status" : null;
+		const statusKeyMap = { mr: "mr_status", po: "po_status", pi: "pi_status", pr: "pr_status", sq: "sq_status", rfq: "rfq_status" };
+		const statusKey = statusKeyMap[type];
 
 		return {
 			[docKey]: doc,
@@ -776,6 +800,11 @@ class PurchaseTimeline {
 			supplier: getCtrl("pt-f-supplier"),
 			mr_status: (statusKey === "mr_status") ? status : null,
 			po_status: (statusKey === "po_status") ? status : null,
+			pi_status: (statusKey === "pi_status") ? status : null,
+			pr_status: (statusKey === "pr_status") ? status : null,
+			sq_status: (statusKey === "sq_status") ? status : null,
+			rfq_status: (statusKey === "rfq_status") ? status : null,
+			approval_status: approvalStatus,
 			date_from: getRaw("pt-f-date-from"),
 			date_to: getRaw("pt-f-date-to"),
 			_type: type,
@@ -816,7 +845,9 @@ class PurchaseTimeline {
 		if (f.company && !(this.filterOptions?.lock_company)) tags.push(`<span class="pt-filter-tag">Co: ${f.company}</span>`);
 		if (f.supplier) tags.push(`<span class="pt-filter-tag">Supplier: ${f.supplier}</span>`);
 		if (f.cost_center) tags.push(`<span class="pt-filter-tag">CC: ${f.cost_center}</span>`);
-		if (f.mr_status || f.po_status) tags.push(`<span class="pt-filter-tag">Status: ${f.mr_status || f.po_status}</span>`);
+		const activeStatus = f.mr_status || f.po_status || f.pi_status || f.pr_status || f.sq_status || f.rfq_status;
+		if (activeStatus) tags.push(`<span class="pt-filter-tag">Status: ${activeStatus}</span>`);
+		if (f.approval_status) tags.push(`<span class="pt-filter-tag">Approval: ${f.approval_status}</span>`);
 		if (f.date_from) tags.push(`<span class="pt-filter-tag">From: ${f.date_from}</span>`);
 		if (f.date_to) tags.push(`<span class="pt-filter-tag">To: ${f.date_to}</span>`);
 		this.$activeTags.html(tags.join(""));
@@ -896,7 +927,7 @@ class PurchaseTimeline {
 	// ─────────────────────────────────────────────────────────────
 	_buildGraphCard(tree, idx) {
 		const isNoMR = tree.no_mr;
-		const statusBadge = !isNoMR ? this._badge(tree.workflow_state || tree.status) : "";
+		const statusBadge = !isNoMR ? this._statusBadges(tree.workflow_state, tree.status) : "";
 		const tenderBadge = tree.tender_type ? `<span class="pt-badge pt-badge-teal">${tree.tender_type}</span>` : "";
 
 		return `<div class="pt-graph-card" data-card-idx="${idx}">
@@ -1113,21 +1144,30 @@ class PurchaseTimeline {
 		});
 	}
 
+	/** Tooltip status text — shows both approval + normal status when present. */
+	_statusText(nd) {
+		const parts = [];
+		if (nd.workflow_state) parts.push(`Approval: ${nd.workflow_state}`);
+		if (nd.status && nd.status !== nd.workflow_state) parts.push(`Status: ${nd.status}`);
+		if (!parts.length) parts.push(`Status: ${nd.status || "—"}`);
+		return parts;
+	}
+
 	_tooltipLines(nd) {
 		const fmt = (v) => v ? frappe.format(v, { fieldtype: "Currency" }) : "—";
 		const lines = [];
 		if (nd.type === "mr") {
-			lines.push(`<strong>Purchase Request</strong>`, nd.name, `Status: ${nd.workflow_state || nd.status || "—"}`, `Date: ${nd.transaction_date || "—"}`);
+			lines.push(`<strong>Purchase Request</strong>`, nd.name, ...this._statusText(nd), `Date: ${nd.transaction_date || "—"}`);
 		} else if (nd.type === "rfq") {
 			lines.push(`<strong>RFQ</strong>`, nd.name, `Status: ${nd.status || "—"}`);
 		} else if (nd.type === "sq") {
 			lines.push(`<strong>Supplier Quotation</strong>`, nd.name, `Supplier: ${nd.supplier_name || nd.supplier || "—"}`, `Total: ${fmt(nd.grand_total)}`);
 		} else if (nd.type === "po") {
-			lines.push(`<strong>Purchase Order</strong>`, nd.name, `Supplier: ${nd.supplier_name || nd.supplier || "—"}`, `Status: ${nd.workflow_state || nd.status || "—"}`, `Total: ${fmt(nd.grand_total)}`);
+			lines.push(`<strong>Purchase Order</strong>`, nd.name, `Supplier: ${nd.supplier_name || nd.supplier || "—"}`, ...this._statusText(nd), `Total: ${fmt(nd.grand_total)}`);
 		} else if (nd.type === "pr") {
 			lines.push(`<strong>Purchase Receipt</strong>`, nd.name, `Supplier: ${nd.supplier_name || nd.supplier || "—"}`, `Total: ${fmt(nd.grand_total)}`);
 		} else if (nd.type === "pi") {
-			lines.push(`<strong>Purchase Invoice</strong>`, nd.name, `Status: ${nd.workflow_state || nd.status || "—"}`, `Total: ${fmt(nd.grand_total)}`, `Due: ${fmt(nd.outstanding_amount)}`);
+			lines.push(`<strong>Purchase Invoice</strong>`, nd.name, ...this._statusText(nd), `Total: ${fmt(nd.grand_total)}`, `Due: ${fmt(nd.outstanding_amount)}`);
 		}
 		return lines;
 	}
@@ -1177,10 +1217,11 @@ class PurchaseTimeline {
 		const fmt = (v) => v ? frappe.format(v, { fieldtype: "Currency" }) : "—";
 		let html = "";
 
-		// Status badge(s)
-		const statusVal = nd.status; // always use raw status, not workflow_state
-		if (statusVal) {
-			html += `<div style="margin-bottom:10px;">${this._badge(statusVal)}`;
+		// Status badge(s) — show both the approval (workflow_state) and the
+		// normal ERPNext document status when both are present.
+		const badges = this._statusBadges(nd.workflow_state, nd.status);
+		if (badges) {
+			html += `<div style="margin-bottom:10px;">${badges}`;
 			if (nd.is_return) html += ` <span class="pt-badge pt-badge-red">↩ Return</span>`;
 			html += `</div>`;
 		}
@@ -1259,7 +1300,39 @@ class PurchaseTimeline {
 	// ─────────────────────────────────────────────────────────────
 	// HELPERS
 	// ─────────────────────────────────────────────────────────────
-	_badge(status) {
+	// Status field options per document type — mirrors each doctype's
+	// `status` select so the Status filter only offers relevant values.
+	static STATUS_BY_TYPE = {
+		mr:  ["Draft", "Submitted", "Stopped", "Cancelled", "Pending", "Partially Ordered", "Partially Received", "Ordered", "Issued", "Transferred", "Received"],
+		po:  ["Draft", "On Hold", "To Receive and Bill", "To Bill", "To Receive", "Completed", "Cancelled", "Closed", "Delivered"],
+		pi:  ["Draft", "Return", "Debit Note Issued", "Submitted", "Paid", "Partly Paid", "Unpaid", "Overdue", "Cancelled", "Internal Transfer"],
+		pr:  ["Draft", "Partly Billed", "To Bill", "Completed", "Return", "Return Issued", "Cancelled", "Closed"],
+		sq:  ["Draft", "Submitted", "Stopped", "Cancelled", "Expired"],
+		rfq: ["Draft", "Submitted", "Cancelled"],
+	};
+
+	_statusOptionsHtml(type) {
+		const list = PurchaseTimeline.STATUS_BY_TYPE[type] || [];
+		return `<option value="">Any Status</option>` +
+			list.map(s => `<option value="${s}">${s}</option>`).join("");
+	}
+
+	/**
+	 * Approval Status options for the given "Search by" type. Only MR / PO / PI
+	 * have a workflow attached — for every other type this returns a single
+	 * disabled-looking "Not Applicable" placeholder (the <select> itself is
+	 * also disabled by the caller so it can't be interacted with or submitted).
+	 */
+	_approvalOptionsHtml(type) {
+		const list = (this.approvalStatusesByType && this.approvalStatusesByType[type]) || [];
+		if (!list.length) {
+			return `<option value="">Not Applicable</option>`;
+		}
+		return `<option value="">Any Approval</option>` +
+			list.map(s => `<option value="${s}">${s}</option>`).join("");
+	}
+
+	_badge(status, prefix) {
 		if (!status) return "";
 		const map = {
 			"Draft": "pt-badge-gray", "Submitted": "pt-badge-blue",
@@ -1273,6 +1346,20 @@ class PurchaseTimeline {
 			"Partially Received": "pt-badge-yellow", "Partially Ordered": "pt-badge-yellow",
 			"Closed": "pt-badge-gray", "Issued": "pt-badge-blue",
 		};
-		return `<span class="pt-badge ${map[status] || "pt-badge-gray"}">${status}</span>`;
+		const lbl = prefix ? `<span style="opacity:.65;font-weight:500;">${prefix}: </span>` : "";
+		return `<span class="pt-badge ${map[status] || "pt-badge-gray"}">${lbl}${status}</span>`;
+	}
+
+	/**
+	 * Render both the approval (workflow_state) and the normal ERPNext
+	 * document status as separate labelled badges. Falls back to whichever
+	 * one exists, and avoids a duplicate when both hold the same value.
+	 */
+	_statusBadges(workflowState, status) {
+		const out = [];
+		if (workflowState) out.push(this._badge(workflowState, "Approval"));
+		if (status && status !== workflowState) out.push(this._badge(status, "Status"));
+		if (!out.length && status) out.push(this._badge(status));
+		return out.join(" ");
 	}
 }
