@@ -110,7 +110,7 @@ def generate_excel(doc):
     employees = frappe.get_all(
         "Employee",
         filters={"company": doc.company},
-        fields=["name", "employee", "employee_name"],
+        fields=["name", "employee", "employee_name", "date_of_joining", "relieving_date", "status"],
         order_by="name asc"
     )
 
@@ -146,13 +146,40 @@ def generate_excel(doc):
     row = 2
     for emp in employees:
 
+        # --- Per-employee active window based on joining & relieving dates ---
+        # Non-active employee (Inactive / Suspended / Left / etc.) with no
+        # relieving date -> skip entirely. Only truly Active employees are
+        # kept when there is no relieving date to bound their tenure.
+        if not emp.relieving_date and (emp.status or "") != "Active":
+            continue
+
+        doj = getdate(emp.date_of_joining) if emp.date_of_joining else None
+        rel = getdate(emp.relieving_date) if emp.relieving_date else None
+
+        emp_start = start
+        if doj and doj > emp_start:
+            emp_start = doj
+
+        emp_end = end
+        if rel and rel < emp_end:
+            emp_end = rel
+
+        # Not employed on any day within the selected range -> exclude
+        if emp_start > emp_end:
+            continue
+
         ws.cell(row=row, column=1, value=emp.name)
         ws.cell(row=row, column=2, value=emp.employee_name)
-        ws.cell(row=row, column=3, value=formatted_from_date)
-        ws.cell(row=row, column=4, value=formatted_to_date)
+        ws.cell(row=row, column=3, value=emp_start.strftime("%d/%m/%Y"))
+        ws.cell(row=row, column=4, value=emp_end.strftime("%d/%m/%Y"))
 
         for i, date in enumerate(dates):
             col = i + 5
+
+            # Outside this employee's active window -> leave the day blank
+            if date < emp_start or date > emp_end:
+                ws.cell(row=row, column=col, value="")
+                continue
 
             attendance = frappe.get_value(
                 "Attendance",
