@@ -105,7 +105,8 @@ doctype_js = {
 
 scheduler_events = {
     "daily": [
-        "custom_app.tasks.end_probation.allocate_earned_leaves_on_probation_end"
+        "custom_app.tasks.end_probation.allocate_earned_leaves_on_probation_end",
+        "custom_app.tasks.auto_cancel_material_request.cancel_unordered_material_requests"
     ],
     "cron": {
         "0 3 1 * *": [
