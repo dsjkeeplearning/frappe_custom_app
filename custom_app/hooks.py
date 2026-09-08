@@ -83,6 +83,7 @@ doc_events = {
         "before_insert": "custom_app.api.supplier.set_vendor_code"
     },
     "Purchase Invoice": {
+        "before_save": "custom_app.api.letter_head.set_letter_head",
         "validate": "custom_app.api.purchase_invoice.validate_pi_items"
     },
     "Attendance Request": {
