@@ -1,17 +1,29 @@
 import frappe
 
-# Mapping of company name → letter head
-COMPANY_LETTER_HEAD_MAP = {
-    "Centre for Developmental Education": "CDE",
-    "Vijaybhoomi University": "VU",
-}
 
-def set_letter_head(doc, method):
+def set_letter_head(doc, method=None):
     """
-    Auto-populate letter_head based on company before save.
-    Applies to: Purchase Order, Purchase Receipt, Material Request.
+    Auto-populate letter_head based on the document's Company,
+    using the Company doctype's `default_letter_head` field.
+
+    Applies to: Purchase Order, Purchase Receipt, Material Request, Purchase Invoice.
+
+    Behavior:
+    - New document: sets letter_head to the company's default_letter_head.
+    - Existing document: only refreshes letter_head if company was changed.
+    - If the company has no default_letter_head set, leave letter_head untouched.
     """
-    letter_head = COMPANY_LETTER_HEAD_MAP.get(doc.company)
-    if letter_head:
-        doc.letter_head = letter_head
-    # If company not in map, leave letter_head untouched (no override)
+    if not doc.get("company"):
+        return
+
+    company_changed = doc.is_new() or doc.has_value_changed("company")
+
+    if not company_changed:
+        return
+
+    default_letter_head = frappe.get_cached_value(
+        "Company", doc.company, "default_letter_head"
+    )
+
+    if default_letter_head:
+        doc.letter_head = default_letter_head
