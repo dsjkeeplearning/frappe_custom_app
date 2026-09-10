@@ -5,7 +5,12 @@ from erpnext.stock.doctype.material_request.material_request import (
     set_missing_values,
     update_item,
 )
-from erpnext.stock.get_item_details import get_item_defaults
+from erpnext.stock.get_item_details import (
+    get_brand_defaults,
+    get_default_expense_account,
+    get_item_defaults,
+    get_item_group_defaults,
+)
 
 
 @frappe.whitelist()
@@ -143,3 +148,56 @@ def make_purchase_order(source_name, target_doc=None, args=None):
 
     doclist.set_onload("load_after_mapping", False)
     return doclist
+
+
+def sync_expense_account(doc, method=None):
+    """Re-derive Material Request Item.expense_account from the row's item.
+
+    expense_account is only ever fetched by get_item_details when an item is
+    picked in the grid, and the field is read-only in the form. Rows that
+    arrive by any other route -- duplicating a document, amending, "Get Items
+    From", the REST API, a data import -- keep whatever account came with
+    them, even after the item is swapped. That stale account then drives
+    budget validation against the wrong head, so re-derive it on every save.
+    """
+    if not doc.company:
+        return
+
+    company_default = frappe.get_cached_value(
+        "Company", doc.company, "default_expense_account"
+    )
+
+    # item_code -> account, so a doc with many rows of the same item hits the
+    # defaults lookups once rather than once per row.
+    resolved = {}
+
+    for row in doc.get("items") or []:
+        if not row.item_code:
+            continue
+
+        if row.item_code not in resolved:
+            resolved[row.item_code] = _expected_expense_account(
+                row.item_code, doc.company, company_default
+            )
+
+        expected = resolved[row.item_code]
+        if expected and row.expense_account != expected:
+            row.expense_account = expected
+
+
+def _expected_expense_account(item_code, company, company_default=None):
+    """Mirror ERPNext's own precedence: item default -> item group -> brand -> company."""
+    args = frappe._dict(
+        {
+            "company": company,
+            "doctype": "Material Request",
+            "expense_account": company_default,
+        }
+    )
+
+    return get_default_expense_account(
+        args,
+        get_item_defaults(item_code, company),
+        get_item_group_defaults(item_code, company),
+        get_brand_defaults(item_code, company),
+    )
