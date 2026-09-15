@@ -88,6 +88,8 @@ doc_events = {
         "validate": "custom_app.api.purchase_invoice.validate_pi_items"
     },
     "Attendance Request": {
+        "before_validate": "custom_app.api.attendance_request.set_shift",
+        "before_submit": "custom_app.api.attendance_request.lock_shift_before_submit",
         "on_update": "custom_app.api.attendance_request.share_with_leave_approver"
     }
 }
@@ -103,6 +105,7 @@ doctype_js = {
     "Material Request": "public/js/material_request.js",
     "Expense Claim": "public/js/expense_claim.js",
     "Supplier Quotation": "public/js/supplier_quotation.js",
+    "Attendance Request": "public/js/attendance_request.js",
 }
 
 scheduler_events = {

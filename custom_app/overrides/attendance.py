@@ -1,9 +1,11 @@
 import frappe
-from frappe.model.document import Document
+from hrms.hr.doctype.attendance.attendance import Attendance
 from custom_app.utils.saturday_utils import is_first_third_fifth_saturday
 
-class CustomAttendance(Document):
+class CustomAttendance(Attendance):
     def validate(self):
+        super().validate()
+
         # Apply only on 1st / 3rd / 5th Saturdays
         if is_first_third_fifth_saturday(self.attendance_date):
 
