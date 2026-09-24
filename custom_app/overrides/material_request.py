@@ -2,6 +2,7 @@ import json
 import frappe
 from frappe.model.mapper import get_mapped_doc
 from erpnext.stock.doctype.material_request.material_request import (
+    MaterialRequest,
     set_missing_values,
     update_item,
 )
@@ -11,6 +12,28 @@ from erpnext.stock.get_item_details import (
     get_item_defaults,
     get_item_group_defaults,
 )
+
+
+class CustomMaterialRequest(MaterialRequest):
+    def update_item_rates(self):
+        """Stop ERPNext from overwriting user-entered item rates on first save.
+
+        ERPNext v15 (since commit 18b15f2, Jul 2026) calls update_item_rates()
+        from on_update to re-price every row from the Buying Price List when
+        buying_price_list "changed", guarded by ``not self.is_new()``. That
+        guard never works on insert: Frappe's db_insert() sets
+        __islocal = False before on_update runs, and there is no
+        doc-before-save, so has_value_changed() is always True. Result: rates
+        typed on a new Material Request are silently reset to the price-list
+        rate. Still present on version-15 / version-15-hotfix / develop.
+
+        Skip the refresh while inserting. On later saves keep core behaviour
+        (rates refresh only when the price list is actually changed).
+        """
+        if self.flags.in_insert or not self.get_doc_before_save():
+            return
+
+        super().update_item_rates()
 
 
 @frappe.whitelist()

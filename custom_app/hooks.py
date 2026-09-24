@@ -11,6 +11,7 @@ override_doctype_class = {
     "Leave Application": "custom_app.overrides.leave_application.CustomLeaveApplication",
     "Expense Claim": "custom_app.overrides.expense_claim.CustomExpenseClaim",
     "Shift Request": "custom_app.overrides.shift_request.CustomShiftRequest",
+    "Material Request": "custom_app.overrides.material_request.CustomMaterialRequest",
 }
 
 override_whitelisted_methods = {
