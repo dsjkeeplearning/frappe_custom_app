@@ -6,7 +6,8 @@ def set_letter_head(doc, method=None):
     Auto-populate letter_head based on the document's Company,
     using the Company doctype's `default_letter_head` field.
 
-    Applies to: Purchase Order, Purchase Receipt, Material Request, Purchase Invoice.
+    Applies to: Purchase Order, Purchase Receipt, Material Request, Purchase Invoice,
+    Salary Slip.
 
     Behavior:
     - New document: sets letter_head to the company's default_letter_head.

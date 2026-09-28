@@ -11,6 +11,7 @@ override_doctype_class = {
     "Leave Application": "custom_app.overrides.leave_application.CustomLeaveApplication",
     "Expense Claim": "custom_app.overrides.expense_claim.CustomExpenseClaim",
     "Shift Request": "custom_app.overrides.shift_request.CustomShiftRequest",
+    "Salary Slip": "custom_app.overrides.salary_slip.CustomSalarySlip",
     "Material Request": "custom_app.overrides.material_request.CustomMaterialRequest",
 }
 
@@ -92,6 +93,9 @@ doc_events = {
         "before_validate": "custom_app.api.attendance_request.set_shift",
         "before_submit": "custom_app.api.attendance_request.lock_shift_before_submit",
         "on_update": "custom_app.api.attendance_request.share_with_leave_approver"
+    },
+    "Salary Slip": {
+        "before_save": "custom_app.api.letter_head.set_letter_head"
     }
 }
 
