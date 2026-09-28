@@ -12,6 +12,7 @@ override_doctype_class = {
     "Expense Claim": "custom_app.overrides.expense_claim.CustomExpenseClaim",
     "Shift Request": "custom_app.overrides.shift_request.CustomShiftRequest",
     "Salary Slip": "custom_app.overrides.salary_slip.CustomSalarySlip",
+    "Material Request": "custom_app.overrides.material_request.CustomMaterialRequest",
 }
 
 override_whitelisted_methods = {
@@ -41,6 +42,7 @@ doc_events = {
             "custom_app.api.material_request.update_item_cost_center",
             "custom_app.api.letter_head.set_letter_head"
         ],
+        "validate": "custom_app.overrides.material_request.sync_expense_account",
         "after_insert": (
             "custom_app.api.material_request.notify_approver_on_create"
         ),
