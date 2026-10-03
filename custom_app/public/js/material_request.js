@@ -4,6 +4,10 @@ frappe.ui.form.on('Material Request', {
         toggle_request_verifier(frm); // handle existing docs on load
     },
 
+    refresh(frm) {
+        restrict_backdated_transaction_date(frm);
+    },
+
     custom_employee(frm) {
         frappe.call({
             method: "frappe.client.get_value",
@@ -88,4 +92,19 @@ function set_cost_center_filter(frm, department) {
             is_group: 0
         }
     }));
+}
+function restrict_backdated_transaction_date(frm) {
+    if (frm.doc.docstatus !== 0) return;
+
+    frappe.call({
+        method: "custom_app.api.budget_control.get_pr_restrictions",
+        callback(r) {
+            if (!r.message || !r.message.restrict_backdated_pr) return;
+
+            const datepicker = frm.fields_dict.transaction_date?.datepicker;
+            if (datepicker) {
+                datepicker.update({ minDate: frappe.datetime.str_to_obj(frappe.datetime.get_today()) });
+            }
+        }
+    });
 }

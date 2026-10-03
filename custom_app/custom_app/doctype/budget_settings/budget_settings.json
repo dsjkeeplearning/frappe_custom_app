@@ -1,0 +1,70 @@
+{
+ "actions": [],
+ "creation": "2026-10-03 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "material_request_section",
+  "restrict_backdated_pr",
+  "restrict_pr_to_current_month_budget"
+ ],
+ "fields": [
+  {
+   "fieldname": "material_request_section",
+   "fieldtype": "Section Break",
+   "label": "Material Request (PR)"
+  },
+  {
+   "default": "0",
+   "description": "If checked, a Material Request cannot be raised with a Transaction Date earlier than today.",
+   "fieldname": "restrict_backdated_pr",
+   "fieldtype": "Check",
+   "label": "Restrict Backdated PR"
+  },
+  {
+   "default": "0",
+   "description": "If checked, a Purchase Material Request can only consume the budget allocated to its own month (as per the Budget's Monthly Distribution). Unused budget of earlier months is not carried forward.",
+   "fieldname": "restrict_pr_to_current_month_budget",
+   "fieldtype": "Check",
+   "label": "Restrict PR to Current Month Budget"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-03 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Custom App",
+ "name": "Budget Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Finance Approver",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Finance User"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

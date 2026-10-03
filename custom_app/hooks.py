@@ -42,7 +42,10 @@ doc_events = {
             "custom_app.api.material_request.update_item_cost_center",
             "custom_app.api.letter_head.set_letter_head"
         ],
-        "validate": "custom_app.overrides.material_request.sync_expense_account",
+        "validate": [
+            "custom_app.overrides.material_request.sync_expense_account",
+            "custom_app.api.budget_control.validate_material_request",
+        ],
         "after_insert": (
             "custom_app.api.material_request.notify_approver_on_create"
         ),
