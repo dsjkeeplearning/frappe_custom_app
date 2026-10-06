@@ -128,6 +128,7 @@ class BudgetUpload(Document):
                        'October', 'November', 'December', 'January', 'February', 'March']
 
         created_distributions = []
+        updated_distributions = []
         created_budgets = []
         skipped_distributions = []
         skipped_budgets = []
@@ -246,25 +247,41 @@ class BudgetUpload(Document):
                     budget_exists_for_account = True
                     skipped_budgets.append(f"{account_name} (Budget: {budget_accounts[0].parent})")
 
-            # Skip if distribution exists AND budget exists for this account
+            # Skip if distribution exists AND an active budget already uses it for this account
+            # (revise those through Budget Reallocation, or cancel the budget first)
             if distribution_exists and budget_exists_for_account:
                 skipped_distributions.append(distribution_id)
                 continue
 
-            # Create Monthly Distribution if it doesn't exist
-            if not distribution_exists:
-                distribution = frappe.new_doc('Monthly Distribution')
-                distribution.distribution_id = distribution_id
+            # Full-precision percentages. Do NOT round: the field stores full floats, and
+            # rounding drifts monthly limits by ₹50-150 on budgets of ₹5-8 crore.
+            percentages = [
+                (value / total_budget * 100) if total_budget > 0 else 0
+                for value in monthly_values
+            ]
+
+            if distribution_exists:
+                # Left over from an earlier (cancelled) budget: overwrite its percentages
+                # with this upload's figures so the new budget gets the new month split.
+                distribution = frappe.get_doc('Monthly Distribution', distribution_id)
                 distribution.fiscal_year = self.fiscal_year
-                
-                # Add percentage for each month
-                for month_name, value in zip(month_names, monthly_values):
-                    percentage = (value / total_budget * 100) if total_budget > 0 else 0
+                distribution.set('percentages', [])
+                for month_name, percentage in zip(month_names, percentages):
                     distribution.append('percentages', {
                         'month': month_name,
                         'percentage_allocation': percentage
                     })
-
+                distribution.save()
+                updated_distributions.append(distribution_id)
+            else:
+                distribution = frappe.new_doc('Monthly Distribution')
+                distribution.distribution_id = distribution_id
+                distribution.fiscal_year = self.fiscal_year
+                for month_name, percentage in zip(month_names, percentages):
+                    distribution.append('percentages', {
+                        'month': month_name,
+                        'percentage_allocation': percentage
+                    })
                 distribution.insert()
                 created_distributions.append(distribution_id)
 
@@ -302,6 +319,7 @@ class BudgetUpload(Document):
 
         # Build detailed message
         details = f"<b>Monthly Distributions Created:</b> {len(created_distributions)}<br>"
+        details += f"<b>Monthly Distributions Updated:</b> {len(updated_distributions)}<br>"
         details += f"<b>Budgets Created:</b> {len(created_budgets)}<br>"
         
         if invalid_accounts:
@@ -333,9 +351,10 @@ class BudgetUpload(Document):
 
         return {
             'status': 'success',
-            'message': f'Successfully created {len(created_distributions)} Monthly Distributions and {len(created_budgets)} Budgets',
+            'message': f'Successfully created {len(created_distributions)} and updated {len(updated_distributions)} Monthly Distributions, created {len(created_budgets)} Budgets',
             'details': details,
             'distributions': created_distributions,
+            'updated_distributions': updated_distributions,
             'budgets': created_budgets,
             'skipped_distributions': skipped_distributions,
             'skipped_budgets': skipped_budgets,
