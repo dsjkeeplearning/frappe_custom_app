@@ -2,11 +2,82 @@ import frappe
 from frappe import _
 from frappe.utils import flt, fmt_money, get_first_day, get_last_day, getdate, today
 
+from erpnext.accounts.doctype.budget import budget as core_budget
 from erpnext.accounts.utils import FiscalYearError, get_fiscal_year
 
 
 def get_budget_settings():
     return frappe.get_cached_doc("Budget Settings")
+
+
+def use_transaction_date_for_pr_budget():
+    """True when ERPNext's standard PR budget check should use Transaction Date.
+
+    Uses .get() so the check is simply off on a site that has not migrated
+    the new Budget Settings field yet.
+    """
+    return bool(get_budget_settings().get("use_transaction_date_for_pr_budget"))
+
+
+# ---------------------------------------------------------------------------
+# ERPNext core budget check: Required By date -> Transaction Date for PRs
+#
+# ERPNext v15 (and develop) hardcode the Required By date (schedule_date) for
+# Material Requests in two places, with no setting to change it:
+#   1. BuyingController.validate_budget() passes schedule_date as the
+#      posting_date, which picks the fiscal year and the month used for the
+#      "Accumulated Monthly" budget and for actual expenses up to month end.
+#      -> overridden in CustomMaterialRequest.validate_budget().
+#   2. budget.get_other_condition() matches pending (not yet ordered) PRs to
+#      the fiscal year by schedule_date.
+#      -> replaced below by get_other_condition().
+# Both changes apply only to Material Requests and only while
+# Budget Settings > "Use Transaction Date for PR Budget Check" is ticked.
+# ---------------------------------------------------------------------------
+
+
+def get_other_condition(args, for_doc):
+    """budget.get_other_condition, matching PRs by transaction_date when enabled."""
+    if for_doc != "Material Request" or not use_transaction_date_for_pr_budget():
+        return _core_get_other_condition(args, for_doc)
+
+    condition = f"expense_account = {frappe.db.escape(args.expense_account)}"
+    budget_against_field = args.get("budget_against_field")
+
+    if budget_against_field and args.get(budget_against_field):
+        condition += (
+            f" and child.{budget_against_field} = {frappe.db.escape(args.get(budget_against_field))}"
+        )
+
+    if args.get("fiscal_year"):
+        start_date, end_date = frappe.get_cached_value(
+            "Fiscal Year", args.get("fiscal_year"), ["year_start_date", "year_end_date"]
+        )
+        condition += (
+            f" and parent.transaction_date between {frappe.db.escape(str(start_date))}"
+            f" and {frappe.db.escape(str(end_date))}"
+        )
+
+    return condition
+
+
+# Keep a handle on the real core function even if this module is reloaded
+# after the patch has been applied (avoids wrapping our own function).
+_core_get_other_condition = getattr(
+    core_budget.get_other_condition, "_core_original", core_budget.get_other_condition
+)
+get_other_condition._core_original = _core_get_other_condition
+
+
+def patch_core_budget():
+    """Route core's PR fiscal-year matching through get_other_condition.
+
+    Idempotent. budget.get_requested_amount() looks get_other_condition up in
+    the budget module's globals at call time, so replacing the module
+    attribute is enough. Behaviour is unchanged while the setting is off.
+    """
+    if core_budget.get_other_condition is not get_other_condition:
+        core_budget.get_other_condition = get_other_condition
 
 
 @frappe.whitelist()

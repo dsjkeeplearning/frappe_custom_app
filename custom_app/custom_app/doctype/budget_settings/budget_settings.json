@@ -6,7 +6,8 @@
  "field_order": [
   "material_request_section",
   "restrict_backdated_pr",
-  "restrict_pr_to_current_month_budget"
+  "restrict_pr_to_current_month_budget",
+  "use_transaction_date_for_pr_budget"
  ],
  "fields": [
   {
@@ -27,13 +28,20 @@
    "fieldname": "restrict_pr_to_current_month_budget",
    "fieldtype": "Check",
    "label": "Restrict PR to Current Month Budget"
+  },
+  {
+   "default": "0",
+   "description": "If checked, ERPNext's standard budget check on a Purchase Material Request uses the PR's Transaction Date (the month it is raised) instead of its Required By date to pick the month and fiscal year of the budget. Pending PRs are also matched to the fiscal year by Transaction Date.",
+   "fieldname": "use_transaction_date_for_pr_budget",
+   "fieldtype": "Check",
+   "label": "Use Transaction Date for PR Budget Check"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-03 12:00:00.000000",
+ "modified": "2026-10-09 15:52:19.700860",
  "modified_by": "Administrator",
  "module": "Custom App",
  "name": "Budget Settings",
