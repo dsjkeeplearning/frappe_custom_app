@@ -3,7 +3,7 @@ import frappe
 # Roles that may see every salary slip (still bound by Company user permissions).
 # Everyone else, including managers who see their reportees' other records
 # through the Employee tree user permission, only sees their own slips.
-FULL_ACCESS_ROLES = {"System Manager", "HR Manager", "HR User"}
+FULL_ACCESS_ROLES = {"System Manager", "HR Manager"}
 
 
 def _has_full_access(user):
