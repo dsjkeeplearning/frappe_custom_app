@@ -105,7 +105,12 @@ doc_events = {
 permission_query_conditions = {
     "Material Request": "custom_app.permissions.material_request.material_request_permission_query",
     "Expense Claim": "custom_app.permissions.expense_claim.expense_claim_permission_query",
-    "WB Task": "custom_app.permissions.wb_task.wb_task_permission_query"
+    "WB Task": "custom_app.permissions.wb_task.wb_task_permission_query",
+    "Salary Slip": "custom_app.permissions.salary_slip.salary_slip_permission_query"
+}
+
+has_permission = {
+    "Salary Slip": "custom_app.permissions.salary_slip.has_permission"
 }
 
 doctype_js = {
