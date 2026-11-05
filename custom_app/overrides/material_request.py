@@ -12,6 +12,13 @@ from erpnext.stock.get_item_details import (
     get_item_defaults,
     get_item_group_defaults,
 )
+from erpnext.accounts.doctype.budget.budget import validate_expense_against_budget
+
+from custom_app.api.budget_control import patch_core_budget, use_transaction_date_for_pr_budget
+
+# This module is imported whenever the Material Request controller is
+# resolved, i.e. before any PR budget check can run in this process.
+patch_core_budget()
 
 
 class CustomMaterialRequest(MaterialRequest):
@@ -34,6 +41,33 @@ class CustomMaterialRequest(MaterialRequest):
             return
 
         super().update_item_rates()
+
+    def validate_budget(self):
+        """Check the PR against the budget of its Transaction Date's month.
+
+        Core BuyingController.validate_budget() uses the Required By date
+        (schedule_date) for Material Requests. When Budget Settings >
+        "Use Transaction Date for PR Budget Check" is ticked, use the
+        transaction_date instead; otherwise keep core behaviour.
+
+        Runs on submit and on "Update Items" after submit (both call this).
+        """
+        if not use_transaction_date_for_pr_budget():
+            return super().validate_budget()
+
+        if self.docstatus != 1:
+            return
+
+        for data in self.get("items"):
+            args = data.as_dict()
+            args.update(
+                {
+                    "doctype": self.doctype,
+                    "company": self.company,
+                    "posting_date": self.transaction_date,
+                }
+            )
+            validate_expense_against_budget(args)
 
 
 @frappe.whitelist()
