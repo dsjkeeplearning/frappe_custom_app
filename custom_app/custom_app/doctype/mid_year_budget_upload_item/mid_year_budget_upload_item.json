@@ -1,0 +1,89 @@
+{
+ "actions": [],
+ "creation": "2026-11-14 14:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "account",
+  "status",
+  "old_annual_budget",
+  "new_annual_budget",
+  "difference",
+  "old_budget",
+  "new_budget",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "account",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Account",
+   "options": "Account",
+   "read_only": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Revised\nNew",
+   "read_only": 1
+  },
+  {
+   "fieldname": "old_annual_budget",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Old Annual Budget",
+   "read_only": 1
+  },
+  {
+   "fieldname": "new_annual_budget",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "New Annual Budget",
+   "read_only": 1
+  },
+  {
+   "fieldname": "difference",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Difference",
+   "read_only": 1
+  },
+  {
+   "description": "Kept as text, not a link, so the Budget can still be cancelled or revised later.",
+   "fieldname": "old_budget",
+   "fieldtype": "Data",
+   "label": "Old Budget (Cancelled)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "new_budget",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "New Budget",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Month-wise Changes and Warnings",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-14 14:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Custom App",
+ "name": "Mid Year Budget Upload Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

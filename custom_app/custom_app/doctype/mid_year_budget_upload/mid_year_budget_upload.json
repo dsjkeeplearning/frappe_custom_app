@@ -1,0 +1,137 @@
+{
+ "actions": [],
+ "autoname": "MYBU-.YYYY.-.#####",
+ "creation": "2026-11-14 14:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "cost_center",
+  "column_break_main",
+  "fiscal_year",
+  "budget_file",
+  "preview_section",
+  "budget_preview",
+  "changes_section",
+  "changes",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Cost Center",
+   "options": "Cost Center",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "fiscal_year",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Fiscal Year",
+   "options": "Fiscal Year",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.company && doc.cost_center && doc.fiscal_year",
+   "description": "Same layout as Download Budget Excel Format: account in the first column, then April to March. Select Company, Cost Center and Fiscal Year first.",
+   "fieldname": "budget_file",
+   "fieldtype": "Attach",
+   "label": "Revised Budget Excel",
+   "mandatory_depends_on": "eval:doc.company && doc.cost_center && doc.fiscal_year"
+  },
+  {
+   "depends_on": "eval:doc.docstatus == 0",
+   "fieldname": "preview_section",
+   "fieldtype": "Section Break",
+   "label": "What This File Will Change"
+  },
+  {
+   "fieldname": "budget_preview",
+   "fieldtype": "HTML",
+   "label": "Budget Preview"
+  },
+  {
+   "depends_on": "eval:doc.docstatus == 1",
+   "fieldname": "changes_section",
+   "fieldtype": "Section Break",
+   "label": "Applied Changes"
+  },
+  {
+   "fieldname": "changes",
+   "fieldtype": "Table",
+   "label": "Budgets Revised or Created",
+   "no_copy": 1,
+   "options": "Mid Year Budget Upload Item",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Mid Year Budget Upload",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-11-14 14:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Custom App",
+ "name": "Mid Year Budget Upload",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

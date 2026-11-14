@@ -7,7 +7,8 @@
   "material_request_section",
   "restrict_backdated_pr",
   "restrict_pr_to_current_month_budget",
-  "use_transaction_date_for_pr_budget"
+  "use_transaction_date_for_pr_budget",
+  "pr_transaction_date_effective_from"
  ],
  "fields": [
   {
@@ -35,13 +36,21 @@
    "fieldname": "use_transaction_date_for_pr_budget",
    "fieldtype": "Check",
    "label": "Use Transaction Date for PR Budget Check"
+  },
+  {
+   "depends_on": "eval:doc.use_transaction_date_for_pr_budget",
+   "description": "Date from which the setting above has been in use. PRs raised before this date consumed the budget of their Required By month, so the Budget Availability report counts them in that month. PRs raised on or after this date are counted in the month they were raised.",
+   "fieldname": "pr_transaction_date_effective_from",
+   "fieldtype": "Date",
+   "label": "Transaction Date Check Effective From",
+   "mandatory_depends_on": "eval:doc.use_transaction_date_for_pr_budget"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-09 15:52:19.700860",
+ "modified": "2026-11-14 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Custom App",
  "name": "Budget Settings",

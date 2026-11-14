@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import flt, fmt_money, get_first_day, get_last_day, getdate, today
+from frappe.utils import add_months, flt, fmt_money, get_first_day, get_last_day, getdate, today
 
 from erpnext.accounts.doctype.budget import budget as core_budget
 from erpnext.accounts.utils import FiscalYearError, get_fiscal_year
@@ -276,3 +276,127 @@ def get_month_consumption(doc, account, cost_center, month_start, month_end):
     )[0][0]
 
     return flt(mr_amount) + flt(ec_amount)
+
+
+# ---------------------------------------------------------------------------
+# Month-wise consumption for a whole fiscal year
+#
+# Shared by the Budget Availability report and Mid Year Budget Upload.
+# ---------------------------------------------------------------------------
+
+
+def get_pr_date_basis(settings=None):
+    """Which date decides the month (and fiscal year) a PR consumed budget in.
+
+    ERPNext checks a PR against the budget of its Required By date. Budget
+    Settings > "Use Transaction Date for PR Budget Check" moved that to the
+    Transaction Date, but only for PRs raised after it was switched on: older
+    PRs were approved against, and still occupy, their Required By month.
+
+    Returns a dict with:
+        use_transaction_date: the setting is on
+        effective_from: PRs raised before this date keep their Required By
+            month (None = every PR is counted by Transaction Date)
+    """
+    settings = settings or get_budget_settings()
+    use_transaction_date = bool(settings.get("use_transaction_date_for_pr_budget"))
+    effective_from = settings.get("pr_transaction_date_effective_from") if use_transaction_date else None
+
+    return frappe._dict(
+        use_transaction_date=use_transaction_date,
+        effective_from=getdate(effective_from) if effective_from else None,
+    )
+
+
+def get_fiscal_year_months(fiscal_year):
+    """Months of the fiscal year in order (Apr to Mar for an April-March year)."""
+    year_start, year_end = frappe.get_cached_value(
+        "Fiscal Year", fiscal_year, ["year_start_date", "year_end_date"]
+    )
+
+    months = []
+    current = get_first_day(year_start)
+    while current <= getdate(year_end):
+        months.append(
+            frappe._dict(
+                key=current.strftime("%Y-%m"),
+                name=current.strftime("%B"),
+                label=current.strftime("%b"),
+                fieldname=current.strftime("%b").lower(),
+            )
+        )
+        current = add_months(current, 1)
+
+    return months
+
+
+def get_monthly_consumption(company, cost_center, fiscal_year, pr_dates=None):
+    """(account, 'YYYY-MM') -> amount consumed in that month of the fiscal year.
+
+    Same documents as get_month_consumption (the check that blocks a PR):
+    submitted Purchase Material Requests plus submitted Expense Claims (by
+    Posting Date), on the account and cost center. A PR falls in the month,
+    and fiscal year, of the date it was budget-checked against, see
+    get_pr_date_basis().
+    """
+    pr_dates = pr_dates or get_pr_date_basis()
+    year_start, year_end = frappe.get_cached_value(
+        "Fiscal Year", fiscal_year, ["year_start_date", "year_end_date"]
+    )
+    params = {
+        "company": company,
+        "cost_center": cost_center,
+        "from_date": year_start,
+        "to_date": year_end,
+        "effective_from": pr_dates.effective_from,
+    }
+
+    required_by = "ifnull(mr.schedule_date, mr.transaction_date)"
+    if not pr_dates.use_transaction_date:
+        pr_date = required_by
+    elif pr_dates.effective_from:
+        pr_date = f"if(mr.transaction_date < %(effective_from)s, {required_by}, mr.transaction_date)"
+    else:
+        pr_date = "mr.transaction_date"
+
+    material_requests = frappe.db.sql(
+        f"""
+        select mri.expense_account as account,
+            date_format({pr_date}, '%%Y-%%m') as month,
+            sum(mri.amount) as amount
+        from `tabMaterial Request Item` mri
+        inner join `tabMaterial Request` mr on mri.parent = mr.name
+        where mr.docstatus = 1
+            and mr.company = %(company)s
+            and mr.material_request_type = 'Purchase'
+            and {pr_date} between %(from_date)s and %(to_date)s
+            and mri.cost_center = %(cost_center)s
+        group by mri.expense_account, month
+        """,
+        params,
+        as_dict=True,
+    )
+
+    expense_claims = frappe.db.sql(
+        """
+        select ecd.default_account as account,
+            date_format(ec.posting_date, '%%Y-%%m') as month,
+            sum(ecd.amount) as amount
+        from `tabExpense Claim Detail` ecd
+        inner join `tabExpense Claim` ec on ecd.parent = ec.name
+        where ec.docstatus = 1
+            and ec.company = %(company)s
+            and ec.posting_date between %(from_date)s and %(to_date)s
+            and ecd.cost_center = %(cost_center)s
+        group by ecd.default_account, month
+        """,
+        params,
+        as_dict=True,
+    )
+
+    consumption = {}
+    for row in material_requests + expense_claims:
+        key = (row.account, row.month)
+        consumption[key] = consumption.get(key, 0) + flt(row.amount)
+
+    return consumption

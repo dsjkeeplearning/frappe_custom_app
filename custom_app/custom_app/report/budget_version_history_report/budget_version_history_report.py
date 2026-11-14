@@ -99,7 +99,7 @@ def get_reallocation_by_new_link(budget_name):
     if not budget_name:
         return None
 
-    return frappe.db.get_value(
+    reallocation = frappe.db.get_value(
         "Budget Reallocation",
         {
             "new_budget_link": budget_name,
@@ -118,6 +118,43 @@ def get_reallocation_by_new_link(budget_name):
             "approval_date"
         ],
         as_dict=True
+    )
+
+    return reallocation or get_mid_year_upload_by_new_link(budget_name)
+
+
+def get_mid_year_upload_by_new_link(budget_name):
+    """
+    A budget revised by a Mid Year Budget Upload, in the shape of a reallocation
+    """
+    revision = frappe.db.get_value(
+        "Mid Year Budget Upload Item",
+        {
+            "new_budget": budget_name,
+            "status": "Revised",
+            "docstatus": 1
+        },
+        ["parent", "old_budget", "old_annual_budget", "new_annual_budget"],
+        as_dict=True
+    )
+    if not revision:
+        return None
+
+    upload = frappe.db.get_value(
+        "Mid Year Budget Upload", revision.parent, ["owner", "modified"], as_dict=True
+    )
+
+    return frappe._dict(
+        name=revision.parent,
+        month=_("All (Mid Year)"),
+        current_budget=None,
+        new_budget=None,
+        total_annual_budget=revision.old_annual_budget,
+        new_total_annual_budget=revision.new_annual_budget,
+        reason=_("Mid Year Budget Upload {0}").format(revision.parent),
+        old_budget_link=revision.old_budget,
+        approver=upload.owner,
+        approval_date=upload.modified,
     )
 
 
