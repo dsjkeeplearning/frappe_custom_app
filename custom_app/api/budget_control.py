@@ -47,10 +47,20 @@ def use_transaction_date_for_pr_budget():
 # ---------------------------------------------------------------------------
 
 
-def get_other_condition(args, for_doc):
-    """budget.get_other_condition, matching PRs by transaction_date when enabled."""
+def get_other_condition(args, *rest):
+    """budget.get_other_condition, matching PRs by transaction_date when enabled.
+
+    Takes either core signature, whichever this ERPNext has:
+        up to v15.124: get_other_condition(args, for_doc) -> SQL text
+        v15.125 on:    get_other_condition(params, child, parent, for_doc)
+                       -> list of query-builder conditions
+    """
+    for_doc = rest[-1]
     if for_doc != "Material Request" or not use_transaction_date_for_pr_budget():
-        return _core_get_other_condition(args, for_doc)
+        return _core_get_other_condition(args, *rest)
+
+    if len(rest) == 3:
+        return _transaction_date_conditions(args, *rest[:2])
 
     condition = f"expense_account = {frappe.db.escape(args.expense_account)}"
     budget_against_field = args.get("budget_against_field")
@@ -72,6 +82,30 @@ def get_other_condition(args, for_doc):
     return condition
 
 
+def _transaction_date_conditions(params, child, parent):
+    """v15.125+ form of the condition above (query-builder criteria)."""
+    conditions = [child.expense_account == params.expense_account]
+    budget_against_field = params.get("budget_against_field")
+
+    if budget_against_field and params.get(budget_against_field):
+        conditions.append(child[budget_against_field] == params.get(budget_against_field))
+
+    if params.get("fiscal_year"):
+        start_date, end_date = frappe.get_cached_value(
+            "Fiscal Year", params.get("fiscal_year"), ["year_start_date", "year_end_date"]
+        )
+        conditions.append(parent.transaction_date[str(start_date) : str(end_date)])
+
+    return conditions
+
+
+def core_uses_query_builder_conditions():
+    """True on ERPNext v15.125+, where get_other_condition takes 4 arguments."""
+    import inspect
+
+    return len(inspect.signature(_core_get_other_condition).parameters) == 4
+
+
 # Keep a handle on the real core function even if this module is reloaded
 # after the patch has been applied (avoids wrapping our own function).
 _core_get_other_condition = getattr(
@@ -86,6 +120,10 @@ def patch_core_budget():
     Idempotent. budget.get_requested_amount() looks get_other_condition up in
     the budget module's globals at call time, so replacing the module
     attribute is enough. Behaviour is unchanged while the setting is off.
+
+    Applied when custom_app is imported (custom_app/__init__.py), so every
+    worker has it before its first budget check, not only after it has
+    loaded the Material Request controller.
     """
     if core_budget.get_other_condition is not get_other_condition:
         core_budget.get_other_condition = get_other_condition

@@ -36,6 +36,15 @@ def get_requested_amount_fixed(args):
 
 
 def apply_budget_patch():
+    """Install the fixed get_requested_amount, only on ERPNext that needs it.
+
+    v15.125+ ships the same fix (rate inside the SUM) and changed
+    get_other_condition to take 4 arguments and return query-builder
+    conditions, which this replacement cannot call. There, keep core.
+    """
     from erpnext.accounts.doctype.budget import budget
 
-    budget.get_requested_amount = get_requested_amount_fixed
+    from custom_app.api.budget_control import core_uses_query_builder_conditions
+
+    if not core_uses_query_builder_conditions():
+        budget.get_requested_amount = get_requested_amount_fixed
