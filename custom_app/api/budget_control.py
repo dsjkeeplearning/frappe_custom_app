@@ -144,7 +144,8 @@ def validate_current_month_budget(doc):
     Consumption is submitted Material Requests (by transaction_date) and
     Expense Claims (by posting_date) of the same account and cost center in
     that month. Stopped PRs count only for the part already ordered, see
-    PR_CONSUMED_AMOUNT.
+    PR_CONSUMED_AMOUNT. Expense Claims count at their sanctioned amount, which
+    is what ERPNext posts to the ledger (zero for a rejected claim).
     """
     if doc.material_request_type != "Purchase" or not doc.transaction_date:
         return
@@ -275,7 +276,7 @@ def get_month_consumption(doc, account, cost_center, month_start, month_end):
 
     ec_amount = frappe.db.sql(
         """
-        select sum(ecd.amount)
+        select sum(ecd.sanctioned_amount)
         from `tabExpense Claim Detail` ecd
         inner join `tabExpense Claim` ec on ecd.parent = ec.name
         where ec.docstatus = 1
@@ -347,8 +348,9 @@ def get_monthly_consumption(company, cost_center, fiscal_year, pr_dates=None):
 
     Same documents as get_month_consumption (the check that blocks a PR):
     submitted Purchase Material Requests plus submitted Expense Claims (by
-    Posting Date), on the account and cost center. Stopped PRs count only for
-    the part already ordered. A PR falls in the month, and fiscal year, of the
+    Posting Date, at the sanctioned amount, so a rejected claim counts for
+    nothing), on the account and cost center. Stopped PRs count only for the
+    part already ordered. A PR falls in the month, and fiscal year, of the
     date it was budget-checked against, see get_pr_date_basis().
     """
     pr_dates = pr_dates or get_pr_date_basis()
@@ -393,7 +395,7 @@ def get_monthly_consumption(company, cost_center, fiscal_year, pr_dates=None):
         """
         select ecd.default_account as account,
             date_format(ec.posting_date, '%%Y-%%m') as month,
-            sum(ecd.amount) as amount
+            sum(ecd.sanctioned_amount) as amount
         from `tabExpense Claim Detail` ecd
         inner join `tabExpense Claim` ec on ecd.parent = ec.name
         where ec.docstatus = 1
