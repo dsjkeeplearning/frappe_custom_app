@@ -6,6 +6,17 @@ from erpnext.accounts.doctype.budget import budget as core_budget
 from erpnext.accounts.utils import FiscalYearError, get_fiscal_year
 
 
+# Budget a PR line occupies, for queries joining `tabMaterial Request` mr and
+# `tabMaterial Request Item` mri. A stopped PR releases its budget, as in
+# ERPNext's own check (budget.get_requested_amount skips status "Stopped"),
+# except for the part already ordered, which still becomes a real cost.
+PR_CONSUMED_AMOUNT = (
+    "if(mr.status = 'Stopped',"
+    " mri.amount * least(ifnull(mri.ordered_qty / nullif(mri.stock_qty, 0), 0), 1),"
+    " mri.amount)"
+)
+
+
 def get_budget_settings():
     return frappe.get_cached_doc("Budget Settings")
 
@@ -130,9 +141,10 @@ def validate_current_month_budget(doc):
     earlier months is NOT carried forward, unlike ERPNext's "Accumulated
     Monthly" check.
 
-    Consumption mirrors the "Budget Committed Actual" report's "PR/EC Raised":
-    submitted Material Requests (by transaction_date) and Expense Claims (by
-    posting_date) of the same account and cost center in that month.
+    Consumption is submitted Material Requests (by transaction_date) and
+    Expense Claims (by posting_date) of the same account and cost center in
+    that month. Stopped PRs count only for the part already ordered, see
+    PR_CONSUMED_AMOUNT.
     """
     if doc.material_request_type != "Purchase" or not doc.transaction_date:
         return
@@ -246,8 +258,8 @@ def get_month_consumption(doc, account, cost_center, month_start, month_end):
     }
 
     mr_amount = frappe.db.sql(
-        """
-        select sum(mri.amount)
+        f"""
+        select sum({PR_CONSUMED_AMOUNT})
         from `tabMaterial Request Item` mri
         inner join `tabMaterial Request` mr on mri.parent = mr.name
         where mr.docstatus = 1
@@ -335,9 +347,9 @@ def get_monthly_consumption(company, cost_center, fiscal_year, pr_dates=None):
 
     Same documents as get_month_consumption (the check that blocks a PR):
     submitted Purchase Material Requests plus submitted Expense Claims (by
-    Posting Date), on the account and cost center. A PR falls in the month,
-    and fiscal year, of the date it was budget-checked against, see
-    get_pr_date_basis().
+    Posting Date), on the account and cost center. Stopped PRs count only for
+    the part already ordered. A PR falls in the month, and fiscal year, of the
+    date it was budget-checked against, see get_pr_date_basis().
     """
     pr_dates = pr_dates or get_pr_date_basis()
     year_start, year_end = frappe.get_cached_value(
@@ -363,7 +375,7 @@ def get_monthly_consumption(company, cost_center, fiscal_year, pr_dates=None):
         f"""
         select mri.expense_account as account,
             date_format({pr_date}, '%%Y-%%m') as month,
-            sum(mri.amount) as amount
+            sum({PR_CONSUMED_AMOUNT}) as amount
         from `tabMaterial Request Item` mri
         inner join `tabMaterial Request` mr on mri.parent = mr.name
         where mr.docstatus = 1
