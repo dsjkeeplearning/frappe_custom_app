@@ -17,6 +17,19 @@ PR_CONSUMED_AMOUNT = (
 )
 
 
+# Journal Entry ledger rows that use budget, for queries on `tabGL Entry` gle.
+# A Journal Entry books straight to the ledger with no PR, so its ledger rows
+# are counted: debit minus credit, so a correcting entry that moves an expense
+# out of an account lowers that account's use instead of counting twice.
+# Cancelled and opening entries are left out.
+JOURNAL_ENTRY_CONDITIONS = (
+    "gle.voucher_type = 'Journal Entry'"
+    " and gle.is_cancelled = 0"
+    " and gle.is_opening = 'No'"
+    " and gle.company = %(company)s"
+)
+
+
 def get_budget_settings():
     return frappe.get_cached_doc("Budget Settings")
 
@@ -47,10 +60,20 @@ def use_transaction_date_for_pr_budget():
 # ---------------------------------------------------------------------------
 
 
-def get_other_condition(args, for_doc):
-    """budget.get_other_condition, matching PRs by transaction_date when enabled."""
+def get_other_condition(args, *rest):
+    """budget.get_other_condition, matching PRs by transaction_date when enabled.
+
+    Takes either core signature, whichever this ERPNext has:
+        up to v15.124: get_other_condition(args, for_doc) -> SQL text
+        v15.125 on:    get_other_condition(params, child, parent, for_doc)
+                       -> list of query-builder conditions
+    """
+    for_doc = rest[-1]
     if for_doc != "Material Request" or not use_transaction_date_for_pr_budget():
-        return _core_get_other_condition(args, for_doc)
+        return _core_get_other_condition(args, *rest)
+
+    if len(rest) == 3:
+        return _transaction_date_conditions(args, *rest[:2])
 
     condition = f"expense_account = {frappe.db.escape(args.expense_account)}"
     budget_against_field = args.get("budget_against_field")
@@ -72,6 +95,30 @@ def get_other_condition(args, for_doc):
     return condition
 
 
+def _transaction_date_conditions(params, child, parent):
+    """v15.125+ form of the condition above (query-builder criteria)."""
+    conditions = [child.expense_account == params.expense_account]
+    budget_against_field = params.get("budget_against_field")
+
+    if budget_against_field and params.get(budget_against_field):
+        conditions.append(child[budget_against_field] == params.get(budget_against_field))
+
+    if params.get("fiscal_year"):
+        start_date, end_date = frappe.get_cached_value(
+            "Fiscal Year", params.get("fiscal_year"), ["year_start_date", "year_end_date"]
+        )
+        conditions.append(parent.transaction_date[str(start_date) : str(end_date)])
+
+    return conditions
+
+
+def core_uses_query_builder_conditions():
+    """True on ERPNext v15.125+, where get_other_condition takes 4 arguments."""
+    import inspect
+
+    return len(inspect.signature(_core_get_other_condition).parameters) == 4
+
+
 # Keep a handle on the real core function even if this module is reloaded
 # after the patch has been applied (avoids wrapping our own function).
 _core_get_other_condition = getattr(
@@ -86,6 +133,10 @@ def patch_core_budget():
     Idempotent. budget.get_requested_amount() looks get_other_condition up in
     the budget module's globals at call time, so replacing the module
     attribute is enough. Behaviour is unchanged while the setting is off.
+
+    Applied when custom_app is imported (custom_app/__init__.py), so every
+    worker has it before its first budget check, not only after it has
+    loaded the Material Request controller.
     """
     if core_budget.get_other_condition is not get_other_condition:
         core_budget.get_other_condition = get_other_condition
@@ -145,7 +196,9 @@ def validate_current_month_budget(doc):
     Expense Claims (by posting_date) of the same account and cost center in
     that month. Stopped PRs count only for the part already ordered, see
     PR_CONSUMED_AMOUNT. Expense Claims count at their sanctioned amount, which
-    is what ERPNext posts to the ledger (zero for a rejected claim).
+    is what ERPNext posts to the ledger (zero for a rejected claim). Journal
+    Entries count at their net debit (by posting_date), see
+    JOURNAL_ENTRY_CONDITIONS.
     """
     if doc.material_request_type != "Purchase" or not doc.transaction_date:
         return
@@ -187,7 +240,7 @@ def validate_current_month_budget(doc):
                 _(
                     "Insufficient budget for {0} {1} for Account {2} against Cost Center {3}."
                     "<br><br>Budget for the month: {4}"
-                    "<br>Already raised (PR/EC): {5}"
+                    "<br>Already used (PR/EC/JE): {5}"
                     "<br>Available: {6}"
                     "<br>This PR: {7}"
                     "<br><br>Unused budget of previous months cannot be used."
@@ -288,7 +341,19 @@ def get_month_consumption(doc, account, cost_center, month_start, month_end):
         params,
     )[0][0]
 
-    return flt(mr_amount) + flt(ec_amount)
+    je_amount = frappe.db.sql(
+        f"""
+        select sum(gle.debit - gle.credit)
+        from `tabGL Entry` gle
+        where {JOURNAL_ENTRY_CONDITIONS}
+            and gle.posting_date between %(from_date)s and %(to_date)s
+            and gle.account = %(account)s
+            and gle.cost_center = %(cost_center)s
+        """,
+        params,
+    )[0][0]
+
+    return flt(mr_amount) + flt(ec_amount) + flt(je_amount)
 
 
 # ---------------------------------------------------------------------------
@@ -349,9 +414,11 @@ def get_monthly_consumption(company, cost_center, fiscal_year, pr_dates=None):
     Same documents as get_month_consumption (the check that blocks a PR):
     submitted Purchase Material Requests plus submitted Expense Claims (by
     Posting Date, at the sanctioned amount, so a rejected claim counts for
-    nothing), on the account and cost center. Stopped PRs count only for the
-    part already ordered. A PR falls in the month, and fiscal year, of the
-    date it was budget-checked against, see get_pr_date_basis().
+    nothing) plus Journal Entries (by Posting Date, net debit, see
+    JOURNAL_ENTRY_CONDITIONS), on the account and cost center. Stopped PRs
+    count only for the part already ordered. A PR falls in the month, and
+    fiscal year, of the date it was budget-checked against, see
+    get_pr_date_basis().
     """
     pr_dates = pr_dates or get_pr_date_basis()
     year_start, year_end = frappe.get_cached_value(
@@ -408,8 +475,23 @@ def get_monthly_consumption(company, cost_center, fiscal_year, pr_dates=None):
         as_dict=True,
     )
 
+    journal_entries = frappe.db.sql(
+        f"""
+        select gle.account as account,
+            date_format(gle.posting_date, '%%Y-%%m') as month,
+            sum(gle.debit - gle.credit) as amount
+        from `tabGL Entry` gle
+        where {JOURNAL_ENTRY_CONDITIONS}
+            and gle.posting_date between %(from_date)s and %(to_date)s
+            and gle.cost_center = %(cost_center)s
+        group by gle.account, month
+        """,
+        params,
+        as_dict=True,
+    )
+
     consumption = {}
-    for row in material_requests + expense_claims:
+    for row in material_requests + expense_claims + journal_entries:
         key = (row.account, row.month)
         consumption[key] = consumption.get(key, 0) + flt(row.amount)
 

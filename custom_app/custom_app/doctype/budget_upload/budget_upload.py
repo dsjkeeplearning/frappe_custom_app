@@ -135,15 +135,20 @@ class BudgetUpload(Document):
         invalid_accounts = []
         budget_exceeded = []
 
-        # Calculate total budget from Excel file first
+        # Calculate total budget from Excel file first. Only rows that will
+        # create a Budget count against the Master Budget: rows the loop below
+        # skips (unknown account, account already budgeted) add nothing.
         total_new_budget = 0
         data_rows = df.iloc[1:]
-        
+
         for row_idx, row in enumerate(data_rows.itertuples(index=False), start=2):
             account_name = row[0]
             if pd.isna(account_name):
                 continue
-            
+
+            if not frappe.db.exists('Account', account_name) or self.account_has_budget(account_name):
+                continue
+
             # Collect monthly values
             row_total = 0
             for col_idx in range(1, 13):
@@ -361,6 +366,19 @@ class BudgetUpload(Document):
             'invalid_accounts': invalid_accounts
         }
     
+    def account_has_budget(self, account_name):
+        """A draft or submitted Budget of this cost center and year holds the account."""
+        return bool(frappe.db.sql("""
+            SELECT ba.parent
+            FROM `tabBudget Account` ba
+            JOIN `tabBudget` b ON b.name = ba.parent
+            WHERE b.cost_center = %s
+            AND b.fiscal_year = %s
+            AND b.docstatus < 2
+            AND ba.account = %s
+            LIMIT 1
+        """, (self.cost_center, self.fiscal_year, account_name)))
+
     def get_master_budget_limit(self):
         master_budget = frappe.get_doc('Master Budget', {
             'company': self.company,

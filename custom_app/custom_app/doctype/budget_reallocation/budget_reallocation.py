@@ -2,7 +2,7 @@ from datetime import timedelta
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import getdate, add_months, add_days
+from frappe.utils import add_days, add_months, flt, fmt_money, getdate
 import calendar
 from datetime import date
 
@@ -17,44 +17,62 @@ class BudgetReallocation(Document):
         self.validate_material_requests()
     
     def validate_material_requests(self):
-        if self.new_budget < self.current_budget:
-        
-            # get start and end date of the month
-            start_date, end_date = self.get_month_start_end(self.fiscal_year, self.month)
-            total_budget_till_month = self.get_total_budget_till_month()
-            mrs = frappe.get_all('Material Request', filters={
-                'custom_cost_center': self.cost_center,
-                'company': self.company,
-                'transaction_date': ['between', [start_date, end_date]],
-                'docstatus': 1,
-            }, fields=['name'])
+        """A reduction cannot take a month below what it has already used.
 
-            if not mrs:
-                return
+        "Used" is the same figure the Budget Availability report and the PR
+        check use (get_monthly_consumption): submitted Purchase PRs (a Stopped
+        PR only for the part already ordered) plus Expense Claims at their
+        sanctioned amount, on the account's own cost center.
 
-            total_mr_amount = 0
-            for mr in mrs:
-                mris = frappe.get_all('Material Request Item', filters={
-                    'parent': mr.name,
-                    'expense_account': self.account,
-                    'cost_center': self.cost_center,
-                }, fields=['amount'])
-                for mri in mris:
-                    total_mr_amount += mri.amount
+        With "Restrict PR to Current Month Budget" on, a month may only use
+        its own budget, so the month itself is checked. With it off, unused
+        budget rolls forward, so the budget up to and including the month is
+        checked against the use up to and including the month.
+        """
+        if flt(self.new_budget) >= flt(self.current_budget):
+            return
 
-            if total_mr_amount > total_budget_till_month + self.new_budget - self.current_budget:
+        from custom_app.api.budget_control import (
+            get_budget_settings,
+            get_fiscal_year_months,
+            get_monthly_consumption,
+        )
+
+        consumption = get_monthly_consumption(self.company, self.cost_center, self.fiscal_year)
+        months = get_fiscal_year_months(self.fiscal_year)
+        used = {month.name: flt(consumption.get((self.account, month.key))) for month in months}
+        month_names = [month.name for month in months]
+        currency = frappe.get_cached_value("Company", self.company, "default_currency")
+
+        if get_budget_settings().get("restrict_pr_to_current_month_budget"):
+            month_used = used.get(self.month, 0)
+            if month_used > flt(self.new_budget) + 0.005:
                 frappe.throw(_(
-                    'Cannot reduce budget to {0:,.2f} as there are Material Requests '
-                    'totaling {1:,.2f} for Account "{2}" in Cost Center "{3}" '
-                    'till {4} {5}. Please adjust the budget accordingly.'
+                    'Cannot reduce the {0} budget to {1}: {2} is already used in {0} for Account "{3}" '
+                    'in Cost Center "{4}". The budget of a month cannot go below what it has used.'
                 ).format(
-                    self.new_budget,
-                    total_mr_amount,
+                    self.month,
+                    fmt_money(self.new_budget, currency=currency),
+                    fmt_money(month_used, currency=currency),
                     self.account,
                     self.cost_center,
-                    self.month,
-                    self.fiscal_year
-                ))
+                ), title=_("Cannot reduce budget"))
+            return
+
+        used_till_month = sum(used[name] for name in month_names[: month_names.index(self.month) + 1])
+        budget_till_month = self.get_total_budget_till_month() + flt(self.new_budget) - flt(self.current_budget)
+        if used_till_month > budget_till_month + 0.005:
+            frappe.throw(_(
+                'Cannot reduce the {0} budget to {1}: the budget from the start of the year up to {0} '
+                'would be {2}, but {3} is already used for Account "{4}" in Cost Center "{5}".'
+            ).format(
+                self.month,
+                fmt_money(self.new_budget, currency=currency),
+                fmt_money(budget_till_month, currency=currency),
+                fmt_money(used_till_month, currency=currency),
+                self.account,
+                self.cost_center,
+            ), title=_("Cannot reduce budget"))
 
     def get_total_budget_till_month(self):
         # fetch budget till the selected month
@@ -86,35 +104,6 @@ class BudgetReallocation(Document):
                         total_budget += (amount * row.percentage_allocation) / 100
                 return total_budget
         return 0
-
-    def get_month_start_end(self,fiscal_year, month_name):
-        """
-        Returns start_date and end_date of a given month in a fiscal year
-        """
-
-        # Fetch fiscal year dates
-        fy = frappe.get_doc("Fiscal Year", fiscal_year)
-        fy_start = getdate(fy.year_start_date)
-        fy_end = getdate(fy.year_end_date)
-
-        # Month name to month number
-        month_number = list(calendar.month_name).index(month_name)
-
-        # Determine correct year for the month
-        year = fy_start.year
-        if month_number < fy_start.month:
-            year += 1
-
-        # Month start & end
-        start_date = date(year, month_number, 1)
-        last_day = calendar.monthrange(year, month_number)[1]
-        end_date = date(year, month_number, last_day)
-
-        # Safety check (month must lie within fiscal year)
-        if start_date < fy_start or end_date > fy_end:
-            frappe.throw(f"{month_name} is outside Fiscal Year {fiscal_year}")
-
-        return fy_start, end_date
 
     def on_submit(self):
         """Reallocate budget by updating Monthly Distribution and Budget"""
