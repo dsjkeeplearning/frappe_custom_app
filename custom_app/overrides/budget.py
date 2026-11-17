@@ -48,3 +48,75 @@ def apply_budget_patch():
 
     if not core_uses_query_builder_conditions():
         budget.get_requested_amount = get_requested_amount_fixed
+
+
+def validate_master_budget_limit(doc, method=None):
+    """Budget before_submit: the cost center's budgets must fit its Master Budget.
+
+    Budget Upload, Mid Year Budget Upload and Budget Reallocation already check
+    this for the whole change; this catches a Budget created or amended from
+    the Budget form. A cost center with no row in the submitted Master Budget
+    is not checked, as before.
+
+    The total is every submitted Budget of the cost center and fiscal year
+    except this one, plus this one. An amendment's original is cancelled
+    before the amendment is submitted, so it is not counted twice.
+    """
+    from frappe import _
+    from frappe.utils import flt, fmt_money
+
+    if doc.budget_against != "Cost Center" or not doc.cost_center:
+        return
+
+    master_budget = frappe.db.get_value(
+        "Master Budget", {"company": doc.company, "fiscal_year": doc.fiscal_year, "docstatus": 1}
+    )
+    if not master_budget:
+        return
+
+    limit = frappe.db.get_value(
+        "Master Budget Department",
+        {"parent": master_budget, "parenttype": "Master Budget", "cost_center": doc.cost_center},
+        "budget",
+    )
+    if limit is None:
+        return
+
+    others = frappe.db.sql(
+        """
+        select sum(ba.budget_amount)
+        from `tabBudget Account` ba
+        inner join `tabBudget` b on b.name = ba.parent
+        where b.docstatus = 1
+            and b.company = %s
+            and b.fiscal_year = %s
+            and b.cost_center = %s
+            and b.name != %s
+        """,
+        (doc.company, doc.fiscal_year, doc.cost_center, doc.name),
+    )[0][0]
+
+    this_budget = sum(flt(row.budget_amount) for row in doc.accounts)
+    total = flt(others) + this_budget
+
+    if total > flt(limit) + 0.005:
+        currency = frappe.get_cached_value("Company", doc.company, "default_currency")
+        frappe.throw(
+            _(
+                "Master Budget limit exceeded for Cost Center {0}, Fiscal Year {1}."
+                "<br><br>Master Budget limit: {2}"
+                "<br>Other budgets of this cost center: {3}"
+                "<br>This budget: {4}"
+                "<br>Excess: {5}"
+                "<br><br>Reduce the budget or revise the Master Budget ({6}) first."
+            ).format(
+                frappe.bold(doc.cost_center),
+                doc.fiscal_year,
+                frappe.bold(fmt_money(limit, currency=currency)),
+                fmt_money(others, currency=currency),
+                fmt_money(this_budget, currency=currency),
+                frappe.bold(fmt_money(total - flt(limit), currency=currency)),
+                master_budget,
+            ),
+            title=_("Master Budget Limit Exceeded"),
+        )

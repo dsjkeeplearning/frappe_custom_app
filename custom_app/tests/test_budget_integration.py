@@ -610,6 +610,28 @@ class ProcureToPayMixin:
         payment.insert(ignore_permissions=True)
         return apply_workflow(payment, "Approve")
 
+    def make_journal_entry(self, lines, posting_date=TODAY):
+        """Submitted Journal Entry. lines = [(account, amount)], debit > 0, credit < 0."""
+        je = frappe.get_doc(
+            {
+                "doctype": "Journal Entry",
+                "company": COMPANY,
+                "posting_date": posting_date,
+                "accounts": [
+                    {
+                        "account": account,
+                        "cost_center": COST_CENTER,
+                        "debit_in_account_currency": max(amount, 0),
+                        "credit_in_account_currency": max(-amount, 0),
+                    }
+                    for account, amount in lines
+                ],
+            }
+        )
+        je.insert(ignore_permissions=True)
+        je.submit()
+        return je
+
     def make_expense_claim(self, amount, sanctioned=None):
         claim = frappe.get_doc(
             {
@@ -698,24 +720,32 @@ class TestProcureToPay(ProcureToPayMixin, BudgetTestCase):
         self.assertEqual(frappe.db.get_value("Material Request", pr.name, "docstatus"), 2)
         self.assertConsumed(0)
 
-    def test_d8_journal_entry_is_not_counted_by_custom_check(self):
-        # Records behaviour: the custom monthly check and the report count PRs
-        # and Expense Claims only. ERPNext's own check still counts the JE as
-        # actual expense.
-        je = frappe.get_doc(
-            {
-                "doctype": "Journal Entry",
-                "company": COMPANY,
-                "posting_date": TODAY,
-                "accounts": [
-                    {"account": ACCOUNT_A, "cost_center": COST_CENTER, "debit_in_account_currency": 15_000},
-                    {"account": "Cash - CDE", "cost_center": COST_CENTER, "credit_in_account_currency": 15_000},
-                ],
-            }
-        )
-        je.insert(ignore_permissions=True)
-        je.submit()
+    def test_d8_journal_entry_counts_as_used(self):
+        self.make_journal_entry([(ACCOUNT_A, 15_000), ("Cash - CDE", -15_000)])
 
+        self.assertConsumed(15_000)
+
+    def test_d8_correcting_journal_entry_is_not_counted_twice(self):
+        # 20,000 raised on account A; a Journal Entry then moves 5,000 of it
+        # to account B. A has used 15,000, B 5,000: 20,000 in all, not 25,000.
+        self.raise_and_approve_pr(20_000)
+
+        self.make_journal_entry([(ACCOUNT_B, 5_000), (ACCOUNT_A, -5_000)])
+
+        self.assertConsumed(15_000)
+        self.assertEqual(self.report_row(ACCOUNT_B)["oct_consumed"], 5_000)
+
+    def test_d8_cancelled_journal_entry_counts_zero(self):
+        je = self.make_journal_entry([(ACCOUNT_A, 15_000), ("Cash - CDE", -15_000)])
+
+        je.cancel()
+
+        self.assertConsumed(0)
+
+    def test_d8_journal_entry_counts_in_its_posting_month(self):
+        self.make_journal_entry([(ACCOUNT_A, 15_000), ("Cash - CDE", -15_000)], posting_date="2026-09-10")
+
+        self.assertEqual(self.report_row()["sep_consumed"], 15_000)
         self.assertConsumed(0)
 
     def test_supplier_payment_without_reference_is_blocked(self):
@@ -877,6 +907,11 @@ class TestBudgetReallocation(ReallocationMixin, ProcureToPayMixin, BudgetTestCas
 
         self.assertBlocked(self.make_reallocation, 44_999, contains="₹ 45,000.00 is already used in October")
 
+    def test_f3_journal_entries_count_as_used(self):
+        self.make_journal_entry([(ACCOUNT_A, 45_000), ("Cash - CDE", -45_000)])
+
+        self.assertBlocked(self.make_reallocation, 44_999, contains="₹ 45,000.00 is already used in October")
+
     def test_f3_without_month_restriction_budget_to_date_is_checked(self):
         # Unused budget rolls forward, so October may use earlier months'
         # budget: 4,00,000 up to October, 3,90,000 used in October.
@@ -938,6 +973,11 @@ class TestBudgetReallocation(ReallocationMixin, ProcureToPayMixin, BudgetTestCas
 # ---------------------------------------------------------------------------
 
 
+def march_only(amount):
+    """A whole year's budget placed in March."""
+    return {month: (amount if month == "March" else 0) for month in MONTHS}
+
+
 class TestMasterBudget(ReallocationMixin, BudgetTestCase):
     def test_g1_cost_center_rows_cannot_exceed_master_total(self):
         doc = frappe.get_doc(
@@ -952,16 +992,12 @@ class TestMasterBudget(ReallocationMixin, BudgetTestCase):
 
         self.assertBlocked(doc.insert, contains="cannot be greater than Total Budget")
 
-    def test_g1_budget_saved_directly_is_not_checked_against_master(self):
-        # Records behaviour: only Budget Reallocation (and Budget Upload)
-        # compare account budgets with the Master Budget. A Budget saved
-        # directly is not checked, even far above the cost center's row.
-        self.set_master_budget_row(100)
-        account = _get_or_insert(
+    def make_account(self, name):
+        return _get_or_insert(
             "Account",
-            f"TBI-C Test Extra - {ABBR}",
+            f"{name} - {ABBR}",
             {
-                "account_name": "TBI-C Test Extra",
+                "account_name": name,
                 "company": COMPANY,
                 "parent_account": ACCOUNT_PARENT,
                 "root_type": "Expense",
@@ -969,9 +1005,45 @@ class TestMasterBudget(ReallocationMixin, BudgetTestCase):
             },
         ).name
 
-        budget = make_budget(COST_CENTER, account, PLAN_A)
+    def test_g1_budget_saved_directly_over_master_is_blocked(self):
+        # TEST BI already has 20,00,000 allocated; the row allows 25,00,000.
+        self.set_master_budget_row(2_500_000)
+        account = self.make_account("TBI-C Test Extra")
+
+        self.assertBlocked(
+            make_budget, COST_CENTER, account, march_only(500_001), contains="Master Budget limit exceeded"
+        )
+        self.assertEqual(frappe.db.count("Budget", {"cost_center": COST_CENTER, "docstatus": 1}), 2)
+
+    def test_g1_budget_saved_directly_within_master_is_allowed(self):
+        self.set_master_budget_row(2_500_000)
+        account = self.make_account("TBI-C Test Extra")
+
+        budget = make_budget(COST_CENTER, account, march_only(500_000))  # exactly the 5,00,000 left
 
         self.assertEqual(budget.docstatus, 1)
+
+    def test_g1_cost_center_without_master_row_is_not_checked(self):
+        # TEST BI has no row in the Master Budget (as in setUpClass).
+        account = self.make_account("TBI-C Test Extra")
+
+        budget = make_budget(COST_CENTER, account, march_only(50_000_000))
+
+        self.assertEqual(budget.docstatus, 1)
+
+    def test_g1_amending_a_budget_does_not_count_it_twice(self):
+        # Exactly full: amending a budget for the same amount must still pass.
+        self.set_master_budget_row(2_000_000)
+        old = frappe.get_doc("Budget", self.data.budgets[ACCOUNT_A].name)
+        old.cancel()
+        amended = frappe.copy_doc(old)
+        amended.docstatus = 0
+        amended.amended_from = old.name
+        amended.insert(ignore_permissions=True)
+
+        amended.submit()
+
+        self.assertEqual(amended.docstatus, 1)
 
     def test_g2_amended_master_budget_with_higher_total_applies(self):
         name = self.set_master_budget_row(2_000_000)
@@ -1283,6 +1355,19 @@ class TestMidYearUpload(UploadMixin, BudgetTestCase):
         for month, amount in plan.items():
             self.assertAlmostEqual(row[f"{month[:3].lower()}_budget"], amount, delta=0.01, msg=month)
         self.assertEqual(self.report_row(ACCOUNT_B)["annual_budget"], 1_000_000)
+
+    def test_j1_moving_budget_between_accounts_with_no_headroom(self):
+        # The Master Budget is exactly full. A's November goes up 30,000 and
+        # B's down 30,000: the total is unchanged, so the file must apply.
+        self.set_master_budget_row(2_000_000)
+
+        upload = self.make_mid_year_upload(
+            [(ACCOUNT_A, {**PLAN_A, "November": 130_000}), (ACCOUNT_B, {**PLAN_B, "November": 70_000})]
+        )
+        upload.submit()
+
+        self.assertEqual(self.report_row()["nov_budget"], 130_000)
+        self.assertEqual(self.report_row(ACCOUNT_B)["nov_budget"], 70_000)
 
     def test_j2_unchanged_file_is_refused(self):
         self.set_master_budget_row(2_000_000)

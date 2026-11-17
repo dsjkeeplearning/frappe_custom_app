@@ -96,7 +96,10 @@ def get_message(month_wise, pr_dates):
 			" From</b> in Budget Settings to count older PRs in their Required By month."
 		)
 
-	stopped = _("A stopped PR counts only for the part already ordered.")
+	stopped = _(
+		"A stopped PR counts only for the part already ordered. Journal Entries count in the month"
+		" of their posting date."
+	)
 
 	return f"{mode}<br>{dates} {stopped}"
 
