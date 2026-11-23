@@ -3,7 +3,9 @@ from frappe.model.mapper import get_mapped_doc
 from erpnext.buying.doctype.request_for_quotation.request_for_quotation import (
 	set_missing_values as erpnext_set_missing_values,
 )
-from erpnext.accounts.party import get_party_details, get_party_account_currency
+# _get_party_details is what ERPNext's own make_supplier_quotation_from_rfq
+# uses: the public get_party_details() takes no ignore_permissions argument.
+from erpnext.accounts.party import _get_party_details, get_party_account_currency
 
 
 @frappe.whitelist()
@@ -18,7 +20,7 @@ def make_supplier_quotation_from_rfq(source_name, target_doc=None, for_supplier=
 		# --- Standard ERPNext logic ---
 		if for_supplier:
 			target.supplier = for_supplier
-			args = get_party_details(
+			args = _get_party_details(
 				for_supplier,
 				party_type="Supplier",
 				ignore_permissions=True,
@@ -44,9 +46,17 @@ def make_supplier_quotation_from_rfq(source_name, target_doc=None, for_supplier=
 			"Request for Quotation": {
 				"doctype": "Supplier Quotation",
 				"validation": {"docstatus": ["=", 1]},
+				"field_map": {"opportunity": "opportunity"},
 			},
 			"Request for Quotation Item": {
 				"doctype": "Supplier Quotation Item",
+				# Same links as ERPNext's own mapping, so the quotation row
+				# points back to its RFQ row.
+				"field_map": {
+					"name": "request_for_quotation_item",
+					"parent": "request_for_quotation",
+					"project_name": "project",
+				},
 			},
 		},
 		target_doc,

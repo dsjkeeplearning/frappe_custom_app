@@ -88,6 +88,9 @@ doc_events = {
     "Supplier": {
         "before_insert": "custom_app.api.supplier.set_vendor_code"
     },
+    "Budget": {
+        "before_submit": "custom_app.overrides.budget.validate_master_budget_limit"
+    },
     "Purchase Invoice": {
         "before_save": "custom_app.api.letter_head.set_letter_head",
         "validate": "custom_app.api.purchase_invoice.validate_pi_items"

@@ -419,7 +419,10 @@ class MidYearBudgetUpload(Document):
 	def apply(self, comparison):
 		self.set("changes", [])
 
-		for row in comparison.revised:
+		# Reductions first: each Budget is checked against the Master Budget
+		# as it is submitted, so a file that moves budget from one account to
+		# another must free the room before it is used.
+		for row in sorted(comparison.revised, key=lambda row: row.new_total - row.old_total):
 			new_budget = self.revise_budget(row)
 			self.add_change(row, new_budget)
 
