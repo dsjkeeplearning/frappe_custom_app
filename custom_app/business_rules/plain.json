@@ -1,0 +1,931 @@
+{
+ "groups": {
+  "BC": {
+   "name": "Budget check on purchase requests",
+   "summary": "Before a purchase request goes through, its month must have enough budget left. These rules say which month counts and what has already been used."
+  },
+  "BU": {
+   "name": "Budgets and the Master Budget",
+   "summary": "The Master Budget caps each department for the year. No budget may go over it."
+  },
+  "BR": {
+   "name": "Changing budgets",
+   "summary": "Budgets come from an upload, and change through a reallocation or a mid year file. These rules keep every change within the limits and on record."
+  },
+  "RP": {
+   "name": "Budget reports",
+   "summary": "The reports show the same figures the checks use, so a user can see in advance what will pass."
+  },
+  "PR": {
+   "name": "Purchase requests",
+   "summary": "An employee asks for a purchase. These rules fill in the cost center and account, and make sure a budget exists."
+  },
+  "SQ": {
+   "name": "Quotations",
+   "summary": "Vendors quote against a request. A quotation may never be higher than what was approved."
+  },
+  "PO": {
+   "name": "Purchase orders and receipts",
+   "summary": "Procurement orders from the vendor. Every order goes back to a request."
+  },
+  "PI": {
+   "name": "Purchase invoices",
+   "summary": "Finance books the vendor's invoice against its order."
+  },
+  "PE": {
+   "name": "Payments",
+   "summary": "Accounts payable pays vendors and employees, always against something that is due."
+  },
+  "EC": {
+   "name": "Expense claims",
+   "summary": "An employee claims money spent. The claim uses the budget of the employee's department."
+  },
+  "AT": {
+   "name": "Attendance and shifts",
+   "summary": "Check-ins, shifts, Saturdays and the attendance sheet sent to payroll."
+  },
+  "LV": {
+   "name": "Leave, probation and contracts",
+   "summary": "Leave earned at the end of probation, and the monthly reminders to managers and HR."
+  },
+  "PY": {
+   "name": "Salary slips and payslip import",
+   "summary": "How salary slips are emailed, and how the payroll vendor's files are imported."
+  },
+  "WF": {
+   "name": "Approval workflows",
+   "summary": "Who approves each document, and in what order."
+  },
+  "AC": {
+   "name": "Who sees what",
+   "summary": "Which records each role finds in its lists."
+  },
+  "VN": {
+   "name": "Vendors",
+   "summary": "How vendors are registered and numbered."
+  },
+  "EM": {
+   "name": "Emails and letter heads",
+   "summary": "Emails and letter heads follow the company of the document."
+  },
+  "DB": {
+   "name": "Dashboards",
+   "summary": "What each dashboard shows, and for which companies."
+  },
+  "ST": {
+   "name": "Set up on the site",
+   "summary": "Rules made directly on the site, not in the app. They were read on the date shown in the catalogue. The tables below show the site as it is now."
+  },
+  "XX": {
+   "name": "Keeping rules true",
+   "summary": "The rules, this page and the tests always agree. A check fails when they drift apart."
+  }
+ },
+ "rules": {
+  "BC-01": {
+   "title": "A request uses the month it is raised in",
+   "plain": "A purchase request uses the budget of the month of its transaction date, not the month the goods are needed. A request raised in March for April uses the March budget.",
+   "source": "07a6628b3c"
+  },
+  "BC-02": {
+   "title": "With that setting off, the required date counts",
+   "plain": "When the setting is switched off, the standard check uses the month the goods are required by.",
+   "source": "8cd601f9b3"
+  },
+  "BC-03": {
+   "title": "A request stays within its own month's budget",
+   "plain": "A request may use exactly what its month has left and not a rupee more. Money left over from earlier months cannot be used. A month with no budget blocks every request.",
+   "source": "f10fd5dde6"
+  },
+  "BC-04": {
+   "title": "With that setting off, earlier months roll on",
+   "plain": "When the setting is switched off, unused budget of earlier months can be used, as in standard ERPNext.",
+   "source": "d9210a2f1c"
+  },
+  "BC-05": {
+   "title": "How a month's budget is worked out",
+   "plain": "A month gets its share of the year from the budget's monthly split. A budget with no split gives each month one twelfth.",
+   "source": "fa93e526c8"
+  },
+  "BC-06": {
+   "title": "An account with no budget is not checked by month",
+   "plain": "The monthly check looks only at accounts that have a budget for requests. Another rule already refuses a request with no budget at all (see PR-06).",
+   "source": "22d69969c2"
+  },
+  "BC-07": {
+   "title": "Rows on one account are added up first",
+   "plain": "A request cannot pass by splitting an amount over several rows. Rows on the same account and cost center are checked together.",
+   "source": "d59ba2f04e"
+  },
+  "BC-08": {
+   "title": "Only purchase requests use budget",
+   "plain": "A request for a transfer or an issue of material does not use budget.",
+   "source": "722af71583"
+  },
+  "BC-09": {
+   "title": "A request is counted once",
+   "plain": "An approved request uses its full amount at once. Its order, invoice and payment do not use the budget again.",
+   "source": "10cfd7d6b8"
+  },
+  "BC-10": {
+   "title": "A stopped request gives back what was not ordered",
+   "plain": "Stopping a request frees the part that was not ordered. A request stopped when half is ordered keeps half.",
+   "source": "4d217d2091"
+  },
+  "BC-11": {
+   "title": "Cancelled and rejected requests use nothing",
+   "plain": "Cancelling or rejecting a request frees its budget. Cancelling only the order keeps the request, which still uses the budget.",
+   "source": "a3bd0a5f32"
+  },
+  "BC-12": {
+   "title": "Expense claims use budget when approved",
+   "plain": "An approved claim uses the amount that was sanctioned, in the month of its date. Draft and rejected claims use nothing.",
+   "source": "8c1996a38d"
+  },
+  "BC-13": {
+   "title": "Journal entries use budget",
+   "plain": "A journal entry booked to a budgeted account uses its budget in its month. A correcting entry moves the use from one account to the other, so nothing is counted twice.",
+   "source": "1f40674a24"
+  },
+  "BC-14": {
+   "title": "No backdated requests",
+   "plain": "A request cannot be dated before today. A draft raised on an earlier day can still be approved later.",
+   "source": "55c40090a6"
+  },
+  "BC-15": {
+   "title": "Older requests keep the month they were checked in",
+   "plain": "When an effective date is set, requests raised before it are counted in the month they were required by.",
+   "source": "a2fe861251"
+  },
+  "BC-16": {
+   "title": "The year runs from April to March",
+   "plain": "Monthly figures follow the fiscal year, April to March.",
+   "source": "54e73a82c8"
+  },
+  "BC-17": {
+   "title": "The checks work on older and newer ERPNext",
+   "plain": "The budget checks give the same answer before and after the ERPNext upgrade.",
+   "source": "2aced49f1f"
+  },
+  "BC-18": {
+   "title": "Open requests are added up row by row",
+   "plain": "On older ERPNext, each open request row is counted at its own rate.",
+   "source": "2253afb028"
+  },
+  "BC-19": {
+   "title": "Standard budget control still applies",
+   "plain": "ERPNext's own budget control stays in force for orders, invoices and journal entries. With all settings off, requests follow it too.",
+   "source": "d5d557548b"
+  },
+  "BU-01": {
+   "title": "Each department is listed once",
+   "plain": "A Master Budget lists each department only once.",
+   "source": "811d1e14d4"
+  },
+  "BU-02": {
+   "title": "Departments stay within the total",
+   "plain": "The department budgets added together cannot be more than the total of the Master Budget.",
+   "source": "d4883f7616"
+  },
+  "BU-03": {
+   "title": "No budget goes over the Master Budget",
+   "plain": "All budgets of a cost center together stay within its row in the Master Budget, however the budget was made. A cost center that is not in the Master Budget is not checked.",
+   "source": "2cda4a11cd"
+  },
+  "BU-04": {
+   "title": "A higher Master Budget applies at once",
+   "plain": "When the Master Budget is amended with more money, the new limit counts from then on.",
+   "source": "28da467737"
+  },
+  "BR-01": {
+   "title": "A draft reallocation changes nothing",
+   "plain": "A reallocation changes budgets only when it is approved.",
+   "source": "35e53f9d6b"
+  },
+  "BR-02": {
+   "title": "An approved reallocation changes one month",
+   "plain": "Approval changes the chosen month only. The other months keep their amounts, and the new figure counts at once.",
+   "source": "e0f9f126dc"
+  },
+  "BR-03": {
+   "title": "A reallocation shows before and after",
+   "plain": "The form shows the month's present budget, the change and the new total of the year.",
+   "source": "e91edda018"
+  },
+  "BR-04": {
+   "title": "A reallocation needs a budget and a reason",
+   "plain": "Only an account that already has a budget can be reallocated, and a reason must be given.",
+   "source": "f1b994ed34"
+  },
+  "BR-05": {
+   "title": "A month cannot be cut below what it used",
+   "plain": "A reduction is refused when the month has already used more. Requests, claims and journal entries all count as used.",
+   "source": "6c297d7a7d"
+  },
+  "BR-06": {
+   "title": "An increase needs room in the Master Budget",
+   "plain": "A month can be raised only when the cost center still has room in the Master Budget.",
+   "source": "e7626bf671"
+  },
+  "BR-07": {
+   "title": "Who approved a reallocation is recorded",
+   "plain": "The reallocation keeps the old budget, the new budget, the approver and the time.",
+   "source": "1bea77def7"
+  },
+  "BR-08": {
+   "title": "An upload makes one budget per account",
+   "plain": "Each account row in the file becomes one budget, with the file's amount for each month.",
+   "source": "ba6961606b"
+  },
+  "BR-09": {
+   "title": "An upload stays within the Master Budget",
+   "plain": "A file that goes over the cost center's limit is refused. So is a file for a cost center that is not in the Master Budget.",
+   "source": "908621bfc4"
+  },
+  "BR-10": {
+   "title": "Rows that make no budget are skipped",
+   "plain": "An account that already has a budget, or is not in the chart of accounts, is skipped and does not count against the limit.",
+   "source": "ff30534e50"
+  },
+  "BR-11": {
+   "title": "The preview marks wrong cells",
+   "plain": "Before the upload is approved, the preview marks every cell that is not a number.",
+   "source": "c1e6f6d4bc"
+  },
+  "BR-12": {
+   "title": "A mid year file changes only what moved",
+   "plain": "Only months that moved by a rupee or more are changed. A file that changes nothing is refused.",
+   "source": "3ab8b8df36"
+  },
+  "BR-13": {
+   "title": "Budget can move between accounts",
+   "plain": "A file that takes from one account and gives to another works even when the Master Budget is full.",
+   "source": "6171b7ffe0"
+  },
+  "BR-14": {
+   "title": "A mid year cut below use gives a warning",
+   "plain": "Finance may cut a month below what it has used. The file is applied with a warning, and new requests for that month are then blocked.",
+   "source": "4b9901e984"
+  },
+  "BR-15": {
+   "title": "A wrong mid year file is refused",
+   "plain": "A file over the limit, with months out of order, an account twice or a bad amount is refused as a whole.",
+   "source": "d7a83d3f8c"
+  },
+  "BR-16": {
+   "title": "Accounts and cost center must fit the company",
+   "plain": "Every account in the file and the cost center must belong to the chosen company.",
+   "source": "e94ea60f74"
+  },
+  "BR-17": {
+   "title": "Blank rows are left alone, new accounts get a budget",
+   "plain": "A row left blank keeps its budget. A new account gets a budget that stops requests, orders and expenses above it.",
+   "source": "f819cebfe1"
+  },
+  "BR-18": {
+   "title": "A budget with several accounts is revised by hand",
+   "plain": "A budget that covers more than one account cannot be changed from a file.",
+   "source": "9a99a80535"
+  },
+  "BR-19": {
+   "title": "A mid year file cannot be cancelled",
+   "plain": "Cancelling would not bring the old budgets back. Upload a corrected file instead.",
+   "source": "36a6f4ea48"
+  },
+  "RP-01": {
+   "title": "The report shows what a request can use",
+   "plain": "The amount left in the Budget Availability report is exactly what a new request can use.",
+   "source": "bfa2f6500c"
+  },
+  "RP-02": {
+   "title": "Earlier overspending lowers what is left",
+   "plain": "When earlier months used too much, later months have less left. The report and the check agree.",
+   "source": "cbad089240"
+  },
+  "RP-03": {
+   "title": "The report matches figures worked out by hand",
+   "plain": "Real figures were worked out by hand once, and the report still matches them.",
+   "source": "fc65779988"
+  },
+  "RP-04": {
+   "title": "Carry forward rolls on from month to month",
+   "plain": "What a month leaves is added to the next, and what it overspends is taken off. The report stops at the present month.",
+   "source": "f0af06fc6c"
+  },
+  "RP-05": {
+   "title": "What the variance report counts",
+   "plain": "Actual is finance approved claims plus submitted invoices. Raised counts every submitted request in full, so it can be more than what the Budget Availability report calls used.",
+   "source": "cc49e2d8c4"
+  },
+  "RP-06": {
+   "title": "Every version of a budget can be seen",
+   "plain": "The report lists each change of a budget, back to the first version, with reason and approver.",
+   "source": "f70973e5e8"
+  },
+  "RP-07": {
+   "title": "Heads see only their own department",
+   "plain": "A head sees the budget of their own department, whatever is chosen in the filters.",
+   "source": "a5183baeab"
+  },
+  "RP-08": {
+   "title": "Who holds which role",
+   "plain": "The report lists each user with the roles they hold. Internal system roles are left out.",
+   "source": "6ea6fdc121"
+  },
+  "RP-09": {
+   "title": "The payment register",
+   "plain": "Accounts, accounts payable, auditors and finance approvers can list all payments.",
+   "source": "45079f63aa"
+  },
+  "PR-01": {
+   "title": "What a request must say",
+   "plain": "A request names the employee, the cost center, the approver and notes, with a rate on each row.",
+   "source": "1756e90fed"
+  },
+  "PR-02": {
+   "title": "Rows take the request's cost center",
+   "plain": "All rows use the cost center chosen on the request.",
+   "source": "46e00723bd"
+  },
+  "PR-03": {
+   "title": "The employee needs a department with a cost center",
+   "plain": "A request is refused when the employee has no department, or the department has no cost center.",
+   "source": "7c8bab359e"
+  },
+  "PR-04": {
+   "title": "The date needs an active fiscal year",
+   "plain": "A request is refused when no active fiscal year covers its date.",
+   "source": "3727192788"
+  },
+  "PR-05": {
+   "title": "Every item needs an expense account",
+   "plain": "An item with no default expense account in the company cannot be requested.",
+   "source": "24a6a1dc1e"
+  },
+  "PR-06": {
+   "title": "No request without a budget",
+   "plain": "A request is refused when its account has no submitted budget in that cost center and year.",
+   "source": "41892d88f0"
+  },
+  "PR-07": {
+   "title": "The account always follows the item",
+   "plain": "The expense account is taken from the item each time the request is saved, so a copied or imported row cannot keep a wrong account.",
+   "source": "ba72c7b18d"
+  },
+  "PR-08": {
+   "title": "Typed rates are kept",
+   "plain": "The rate a user types is not replaced by the price list when the request is first saved.",
+   "source": "6fae51feed"
+  },
+  "PR-09": {
+   "title": "Some cost centers need a verifier",
+   "plain": "A listed cost center must name a verifier. On any other cost center the verifier is left empty.",
+   "source": "e65188e9da"
+  },
+  "PR-10": {
+   "title": "The approver hears of a new request",
+   "plain": "As soon as a request is made, its approver gets an email with a link.",
+   "source": "10dd364977"
+  },
+  "PR-11": {
+   "title": "The employee hears of a rejection",
+   "plain": "The employee gets one email when the request is rejected.",
+   "source": "ea9200c708"
+  },
+  "PR-12": {
+   "title": "Requests with no order are cancelled after 30 days",
+   "plain": "A request with nothing ordered after 30 days is cancelled, its budget is freed and the employee is told.",
+   "source": "6deeda8f7c"
+  },
+  "PR-13": {
+   "title": "Orders are never lost by the automatic cancel",
+   "plain": "A request with a submitted order is not cancelled. A draft order stays, with a comment on what happened.",
+   "source": "05a389f3b9"
+  },
+  "PR-14": {
+   "title": "The automatic cancel can be tried first",
+   "plain": "It can be run to show what it would do. One request that fails does not stop the rest.",
+   "source": "d73328e56b"
+  },
+  "PR-15": {
+   "title": "Next steps start from an approved request",
+   "plain": "Quotations and orders are made from an approved request and take its cost center.",
+   "source": "c47b6c837c"
+  },
+  "PR-16": {
+   "title": "The printed request shows its month",
+   "plain": "The print shows the month whose budget the request uses.",
+   "source": "baf4f1f4f2"
+  },
+  "PR-17": {
+   "title": "The form fills in the employee and approver",
+   "plain": "A user picks only their own employee record, and the approver is filled in from it.",
+   "source": "da4a0502a8"
+  },
+  "SQ-01": {
+   "title": "A quotation is never above the request",
+   "plain": "A vendor's quotation may equal the approved amount of the request, not exceed it.",
+   "source": "07527f4e9e"
+  },
+  "SQ-02": {
+   "title": "Rows take the quotation's cost center",
+   "plain": "All rows use the cost center of the quotation.",
+   "source": "79bc896c3f"
+  },
+  "SQ-03": {
+   "title": "A new quotation is not ordered",
+   "plain": "A quotation starts as not ordered.",
+   "source": "16c9fd3e18"
+  },
+  "SQ-04": {
+   "title": "Orders update the quotation",
+   "plain": "Each order moves the quotation to partly or completely ordered.",
+   "source": "deae1ce029"
+  },
+  "SQ-05": {
+   "title": "Cancelled orders are taken back",
+   "plain": "Cancelling an order lowers the ordered quantity again, never below zero.",
+   "source": "bb79254d9b"
+  },
+  "SQ-06": {
+   "title": "A quotation can come from a request for quotation",
+   "plain": "The quotation is for the chosen vendor and keeps the cost center and the links.",
+   "source": "68dec66243"
+  },
+  "SQ-07": {
+   "title": "Choosing a vendor keeps the rates",
+   "plain": "The rates from the request are not replaced by the price list when a vendor is chosen.",
+   "source": "e36477f0e7"
+  },
+  "PO-01": {
+   "title": "No order without a request",
+   "plain": "Every row of an order comes from a purchase request.",
+   "source": "3139c4097c"
+  },
+  "PO-02": {
+   "title": "Without a quotation, only the default vendor",
+   "plain": "An order with no quotation goes only to the item's default vendor.",
+   "source": "34d455b84c"
+  },
+  "PO-03": {
+   "title": "The order keeps the request's account",
+   "plain": "An order cannot move the expense to another account than the request.",
+   "source": "d30fc4903a"
+  },
+  "PO-04": {
+   "title": "The cost center follows the whole chain",
+   "plain": "The cost center is mandatory on every document from quotation to invoice.",
+   "source": "8427e7715d"
+  },
+  "PO-05": {
+   "title": "No receipt without an order",
+   "plain": "Goods are received only against an order.",
+   "source": "c11434008d"
+  },
+  "PI-01": {
+   "title": "No invoice without an order",
+   "plain": "Every row of an invoice comes from a purchase order.",
+   "source": "33d9fba3a3"
+  },
+  "PI-02": {
+   "title": "The invoice keeps the same account",
+   "plain": "The expense account of an invoice row is that of its order and its request.",
+   "source": "83549b3ea8"
+  },
+  "PI-03": {
+   "title": "The expense lands where it was requested",
+   "plain": "The invoice books the cost to the account and cost center of the request.",
+   "source": "e99d2d53c7"
+  },
+  "PI-04": {
+   "title": "Payment planning can change after approval",
+   "plain": "The category and the planned payment date can be changed on an approved invoice.",
+   "source": "aff648e95f"
+  },
+  "PE-01": {
+   "title": "An employee is paid against something due",
+   "plain": "A payment to an employee names what is being paid, such as a claim.",
+   "source": "b43ccbb3dd"
+  },
+  "PE-02": {
+   "title": "A vendor is paid only what is due",
+   "plain": "A payment to a vendor names its invoices or orders and leaves nothing over, so no money is paid on account.",
+   "source": "2da6da6848"
+  },
+  "PE-03": {
+   "title": "Who made and approved a payment is recorded",
+   "plain": "The payment keeps its maker and its approver, with the times.",
+   "source": "f95aa472e8"
+  },
+  "EC-01": {
+   "title": "A claim uses the employee's department",
+   "plain": "The cost center of a claim is that of the employee's department, whatever was typed.",
+   "source": "36c6cf562a"
+  },
+  "EC-02": {
+   "title": "The date needs an active fiscal year",
+   "plain": "A claim is refused when no active fiscal year covers its date.",
+   "source": "cae2676326"
+  },
+  "EC-03": {
+   "title": "The claim type needs an account",
+   "plain": "A claim type with no account in the company cannot be claimed.",
+   "source": "5a4f2fc38c"
+  },
+  "EC-04": {
+   "title": "No claim without a budget",
+   "plain": "A claim is refused when its account has no submitted budget in that cost center and year.",
+   "source": "d13a329f21"
+  },
+  "EC-05": {
+   "title": "No one decides on their own claim",
+   "plain": "An employee cannot approve or reject their own claim.",
+   "source": "e61c1db459"
+  },
+  "EC-06": {
+   "title": "The approver hears of a new claim",
+   "plain": "As soon as a claim is made, its approver gets an email.",
+   "source": "4072c295de"
+  },
+  "EC-07": {
+   "title": "The employee hears of the decision",
+   "plain": "The employee gets one email when the claim is approved or rejected.",
+   "source": "3c7720c4c2"
+  },
+  "AT-01": {
+   "title": "A check-in names its employee",
+   "plain": "A check-in without an employee is refused.",
+   "source": "145a409870"
+  },
+  "AT-02": {
+   "title": "The HR app takes check-ins only from those allowed",
+   "plain": "An employee checks in from the HR app only when that is switched on in their record.",
+   "source": "ee80a0c7f1"
+  },
+  "AT-03": {
+   "title": "First, third and fifth Saturdays",
+   "plain": "These Saturdays are found by counting the Saturdays of the month.",
+   "source": "d0631e2ef6"
+  },
+  "AT-04": {
+   "title": "Saturdays off outside the teaching companies",
+   "plain": "On those Saturdays, attendance outside the two teaching companies is saved as absent and marked as a weekly off.",
+   "source": "b5ff3e1efb"
+  },
+  "AT-05": {
+   "title": "An attendance request finds its shift",
+   "plain": "The shift comes from the employee's shift on those days. A request over two shifts must be split.",
+   "source": "1be88d44a1"
+  },
+  "AT-06": {
+   "title": "The shift is checked again at approval",
+   "plain": "A shift that was changed or is out of date is corrected when the request is approved.",
+   "source": "347dc52926"
+  },
+  "AT-07": {
+   "title": "The leave approver can act on the request",
+   "plain": "The employee's leave approver can open and approve the request. A former approver loses it.",
+   "source": "e049729846"
+  },
+  "AT-08": {
+   "title": "No one decides on their own shift request",
+   "plain": "An employee cannot approve or reject their own shift request.",
+   "source": "63b709bdb7"
+  },
+  "AT-09": {
+   "title": "The attendance sheet uses payroll codes",
+   "plain": "Each day is shown as a code, such as present, on duty, sick leave, week off or public holiday.",
+   "source": "6dee9ba560"
+  },
+  "AT-10": {
+   "title": "The sheet covers only days of employment",
+   "plain": "Days before joining and after leaving are blank, and people not employed in the period are left out.",
+   "source": "af26ed2d4c"
+  },
+  "LV-01": {
+   "title": "No one decides on their own leave",
+   "plain": "An employee cannot approve or reject their own leave.",
+   "source": "b5169f4e80"
+  },
+  "LV-02": {
+   "title": "Earned leave starts when probation ends",
+   "plain": "On that day the employee gets earned leave for the rest of the year, as a share of 18 days. It is given once, in the two teaching companies.",
+   "source": "5817f877f7"
+  },
+  "LV-03": {
+   "title": "The leave year ends on 31 March",
+   "plain": "Leave is worked out up to the next 31 March.",
+   "source": "f85ffa402d"
+  },
+  "LV-04": {
+   "title": "Reminder of probations ending",
+   "plain": "On the first of the month, managers and the head of HR get a list of probations ending this month or next.",
+   "source": "c77e16f01e"
+  },
+  "LV-05": {
+   "title": "Reminder of contracts ending",
+   "plain": "On the first of the month, managers and the head of HR get a list of contracts ending this month or next.",
+   "source": "645ce378a6"
+  },
+  "PY-01": {
+   "title": "A payslip carries its own company's letter head",
+   "plain": "The emailed payslip shows the letter head of its own company, not the default one.",
+   "source": "01923c6861"
+  },
+  "PY-02": {
+   "title": "No email address, no payslip email",
+   "plain": "When the employee has no preferred email, the payslip is not sent and the user is told.",
+   "source": "82e11aa59f"
+  },
+  "PY-03": {
+   "title": "Only HR imports payslips",
+   "plain": "Payslips are imported only by HR and system managers.",
+   "source": "17883f91ce"
+  },
+  "PY-04": {
+   "title": "File names say whose and what they are",
+   "plain": "The name of each file gives the employee, the month and the year. A name that does not fit is skipped.",
+   "source": "966c55338b"
+  },
+  "PY-05": {
+   "title": "Each file goes to its employee",
+   "plain": "Each file is kept privately on the record of its employee and month.",
+   "source": "55c3464b13"
+  },
+  "PY-06": {
+   "title": "What a batch needs",
+   "plain": "A batch needs its kind and its password. Only PDF files are read.",
+   "source": "6e71465bc9"
+  },
+  "PY-07": {
+   "title": "Files that cannot be used are listed once",
+   "plain": "Files that could not be used are skipped and listed together in one log entry.",
+   "source": "d6067ff3db"
+  },
+  "PY-08": {
+   "title": "Large batches run in the background",
+   "plain": "Up to ten files are handled at once, more in the background. The uploaded zip is deleted afterwards.",
+   "source": "0073fe9abb"
+  },
+  "WF-01": {
+   "title": "Eight documents have an approval workflow",
+   "plain": "Requests, orders, invoices, payments, claims, budget uploads, reallocations and the Master Budget each have one workflow.",
+   "source": "f3e0f7a112"
+  },
+  "WF-02": {
+   "title": "Who approves what",
+   "plain": "The expense approver approves requests and claims, procurement approves orders, finance approves invoices and budgets, and the AP manager approves payments.",
+   "source": "678153c642"
+  },
+  "WF-03": {
+   "title": "No one approves their own draft",
+   "plain": "A draft is approved or rejected by someone other than its maker.",
+   "source": "f4fcc0fe6f"
+  },
+  "WF-04": {
+   "title": "Verify first, then approve",
+   "plain": "When a request names a verifier, it is verified before it can be approved.",
+   "source": "54aae9c571"
+  },
+  "WF-05": {
+   "title": "A claim is approved twice",
+   "plain": "The manager approves a claim first and finance second. A claim finance rejects is cancelled.",
+   "source": "f7559bfa6e"
+  },
+  "WF-06": {
+   "title": "What approval and rejection do",
+   "plain": "Approval makes a document final. A rejected document stays a draft, except a claim, which is closed as rejected.",
+   "source": "31be2db6f3"
+  },
+  "WF-07": {
+   "title": "A reallocation is not undone by cancelling",
+   "plain": "To undo a reallocation, make another one.",
+   "source": "8952899217"
+  },
+  "AC-01": {
+   "title": "Who lists everything",
+   "plain": "System managers and auditors list all requests and claims. A user with none of the roles lists nothing.",
+   "source": "0332394637"
+  },
+  "AC-02": {
+   "title": "Who lists which requests",
+   "plain": "Procurement lists approved requests, approvers the ones they approve or verify, and employees their own.",
+   "source": "7bf376dab7"
+  },
+  "AC-03": {
+   "title": "Who lists which claims",
+   "plain": "Finance lists claims from approval on, accounts payable those finance approved, approvers their own to approve, and employees their own.",
+   "source": "42beb7ffd7"
+  },
+  "AC-04": {
+   "title": "These rules filter lists",
+   "plain": "The rules above decide what a list shows. Opening a document follows the permissions of the role.",
+   "source": "cba7bcfbde"
+  },
+  "AC-05": {
+   "title": "Salary slips are private",
+   "plain": "A salary slip is seen only by its employee, HR managers and system managers.",
+   "source": "03aa4cb8e5"
+  },
+  "AC-06": {
+   "title": "Tasks are listed to the two people concerned",
+   "plain": "A task is listed to the person who gave it and the person who does it.",
+   "source": "ae6c8a35a3"
+  },
+  "AC-07": {
+   "title": "Access follows the role profile",
+   "plain": "An employee is limited to their own record and company. HR and Admin are not, and can also send from the other companies' mailboxes.",
+   "source": "6e3c47fa6c"
+  },
+  "VN-01": {
+   "title": "How vendors are numbered",
+   "plain": "A vendor's code is the company, the year and the next number of that company and year.",
+   "source": "75036e467c"
+  },
+  "VN-02": {
+   "title": "What a vendor must give",
+   "plain": "A vendor gives its tax number, contact, address and bank details, in the Desk and on the website form.",
+   "source": "d8e8694f16"
+  },
+  "EM-01": {
+   "title": "Emails go out from the right company",
+   "plain": "An email about a document goes out from the mailbox of that document's company.",
+   "source": "b8ca9e51d8"
+  },
+  "EM-02": {
+   "title": "Notifications never block work",
+   "plain": "Each person gets a notification once. If sending fails, the document is still saved.",
+   "source": "ea53982957"
+  },
+  "EM-03": {
+   "title": "Letter heads follow the company",
+   "plain": "A new document takes the letter head of its company.",
+   "source": "450192731e"
+  },
+  "DB-01": {
+   "title": "System managers see every company",
+   "plain": "A system manager can choose any company on the dashboards.",
+   "source": "41d25ad9bd"
+  },
+  "DB-02": {
+   "title": "Heads are kept to their companies",
+   "plain": "An institution head sees only the companies they have permission for.",
+   "source": "08b8f8eb58"
+  },
+  "DB-03": {
+   "title": "A head with no company permission",
+   "plain": "The HR and finance dashboards then show nothing, while the purchase timeline shows all companies.",
+   "source": "3637b2ea92"
+  },
+  "DB-04": {
+   "title": "The purchase timeline is for heads",
+   "plain": "Only system managers and institution heads can use the purchase timeline.",
+   "source": "23dd10e7c3"
+  },
+  "DB-05": {
+   "title": "What a period means",
+   "plain": "Month, quarter and year are those of the calendar, unless dates are given.",
+   "source": "46bf6bb90c"
+  },
+  "DB-06": {
+   "title": "How creditors are aged",
+   "plain": "Unpaid invoices are grouped by age in steps of 30 days.",
+   "source": "7f64cfa880"
+  },
+  "DB-07": {
+   "title": "How vendor risk is judged",
+   "plain": "Risk is high when three vendors take more than 40 percent of the spend, and medium above 25.",
+   "source": "0192a16442"
+  },
+  "DB-08": {
+   "title": "Who opens the other pages",
+   "plain": "Asset managers open the asset dashboard, and the finance roles download the budget file format.",
+   "source": "596b633f62"
+  },
+  "ST-01": {
+   "title": "All three budget switches are on",
+   "plain": "Backdated requests are refused, each request uses only its own month, and the month is the one it is raised in.",
+   "source": "6dbd19b3fc"
+  },
+  "ST-02": {
+   "title": "An older date limit on requests",
+   "plain": "An earlier script refuses requests dated more than 30 days back. The newer rule is stricter (see BC-14).",
+   "source": "bc1e2a64be"
+  },
+  "ST-03": {
+   "title": "The fiscal year is filled in",
+   "plain": "Requests, orders and invoices get the fiscal year of their date.",
+   "source": "c957208f00"
+  },
+  "ST-04": {
+   "title": "The total of a request",
+   "plain": "The form adds up the rows of a request.",
+   "source": "0f37fd3e10"
+  },
+  "ST-05": {
+   "title": "Changing an amount changes the quantity",
+   "plain": "On orders and invoices, typing an amount works out the quantity from the rate.",
+   "source": "fdf638985f"
+  },
+  "ST-06": {
+   "title": "A user follows the employee's status",
+   "plain": "When HR sets an employee to left, inactive or suspended on the form, their login is disabled. Active enables it again.",
+   "source": "4dd40c3f72"
+  },
+  "ST-07": {
+   "title": "Roles follow the designation",
+   "plain": "A new employee gets the roles that belong to their designation.",
+   "source": "ffcf42a971"
+  },
+  "ST-08": {
+   "title": "The leave approver hears of new leave",
+   "plain": "A new leave application emails the leave approver.",
+   "source": "1f95b508fa"
+  },
+  "ST-09": {
+   "title": "Job requisitions have a workflow",
+   "plain": "A job requisition has the states draft, pending, approved and rejected.",
+   "source": "0a4877c3f4"
+  },
+  "ST-10": {
+   "title": "Check-in reminders are stopped",
+   "plain": "Reminders for missing check-ins and check-outs exist but are stopped.",
+   "source": "dc1a9eb0f3"
+  },
+  "ST-11": {
+   "title": "Shifts mark attendance from check-ins",
+   "plain": "Each shift marks attendance from check-ins, with its own hours for a half day or an absence.",
+   "source": "8c911aa9ee"
+  },
+  "ST-12": {
+   "title": "Same rate from order to invoice",
+   "plain": "An invoice needs an order, and its rate must be that of the order.",
+   "source": "298f921949"
+  },
+  "ST-13": {
+   "title": "Approvers are mandatory",
+   "plain": "A leave application and a claim must name their approver.",
+   "source": "d1ec1d1615"
+  },
+  "ST-14": {
+   "title": "How payroll counts attendance",
+   "plain": "Payroll follows attendance. A day with no attendance counts as present, and payslips are emailed.",
+   "source": "b17c3be516"
+  },
+  "ST-15": {
+   "title": "Mandatory fields added on the site",
+   "plain": "An order needs notes, an invoice needs its attachment and a payment needs its reference number.",
+   "source": "04c2d348bd"
+  },
+  "ST-16": {
+   "title": "Check-in times are locked",
+   "plain": "A check-in says in or out, and its time cannot be typed.",
+   "source": "e4e3d324db"
+  },
+  "ST-17": {
+   "title": "Investment declarations lock",
+   "plain": "After the lock date, an employee cannot change their declaration on the form.",
+   "source": "3c856b9376"
+  },
+  "ST-18": {
+   "title": "Vendor group numbers are replaced",
+   "plain": "A form script numbers vendors by group, but a new vendor always gets the company number (see VN-01).",
+   "source": "7ad082ddbe"
+  },
+  "XX-01": {
+   "title": "Every rule has its own number",
+   "plain": "Each rule has one number that is never used again.",
+   "source": "b9c167575c"
+  },
+  "XX-02": {
+   "title": "Rules and tests belong together",
+   "plain": "A rule names the tests that prove it, and every test belongs to a rule.",
+   "source": "5c036c51de"
+  },
+  "XX-03": {
+   "title": "No custom code without a rule",
+   "plain": "Everything the app hooks into ERPNext is covered by a rule.",
+   "source": "fe3b6185a0"
+  },
+  "XX-04": {
+   "title": "The plain words follow the rule",
+   "plain": "When a rule changes, its words on this page must be written again.",
+   "source": "ad8d636d89"
+  },
+  "XX-05": {
+   "title": "No personal data in the rules",
+   "plain": "The rules name no person, number or key.",
+   "source": "0e779a3401"
+  },
+  "XX-06": {
+   "title": "Only system managers see this page",
+   "plain": "The page and its data are for system managers only.",
+   "source": "7a6cc96225"
+  },
+  "XX-07": {
+   "title": "Changes made on the site are shown",
+   "plain": "The page shows what was set up on the site itself and is not in the app.",
+   "source": "359af0aa85"
+  }
+ }
+}
