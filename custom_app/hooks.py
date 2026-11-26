@@ -139,8 +139,12 @@ scheduler_events = {
     }
 }
 
-# A Business Rules shortcut on Home, for System Managers (business_rules/shortcut.py).
-after_migrate = ["custom_app.business_rules.shortcut.add_to_home"]
+# Business Rules on Home and in the sidebar below Config Email, for System Managers
+# (business_rules/shortcut.py).
+after_migrate = [
+    "custom_app.business_rules.shortcut.add_to_home",
+    "custom_app.business_rules.shortcut.add_to_sidebar",
+]
 
 fixtures = [
     {

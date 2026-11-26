@@ -198,5 +198,71 @@ class TestShortcut(SiteTest):
 		self.assertEqual(len(self.site.errors), 1)
 
 
+def address(name):
+	"""The /app address Frappe gives a name, as frappe.router.slug does."""
+	return name.lower().replace(" ", "-")
+
+
+class TestSidebar(SiteTest):
+	def sidebar(self, *entries):
+		for name, sequence, parent in entries:
+			self.site.add("Workspace", name, public=1, sequence_id=sequence, parent_page=parent)
+
+	def made(self):
+		[entry] = self.site.made
+		self.assertEqual(entry.calls, ["save"])
+		return entry
+
+	def test_the_sidebar_entry_opens_the_page_for_system_managers(self):
+		self.sidebar(("Build", 33, ""), ("Config Email", 35, ""))
+		shortcut.add_to_sidebar()
+		entry = self.made()
+		page = json.loads(PAGE.read_text(encoding="utf-8"))
+		# The sidebar links to the address of the title, the page; the entry's own name has another.
+		self.assertEqual(address(entry.title), page["name"])
+		self.assertNotEqual(address(entry.label), page["name"])
+		self.assertEqual([r.role for r in entry.roles], [row["role"] for row in page["roles"]])
+		self.assertEqual((entry.public, entry.is_hidden, entry.module), (1, 0, None))
+		self.assertEqual([(s.type, s.link_to) for s in entry.shortcuts], [("Page", page["name"])])
+		self.assertIn("Business Rules", entry.content)
+
+	def test_the_entry_goes_right_below_config_email(self):
+		self.sidebar(("Build", 33, ""), ("Config Email", 35, ""), ("Tax", 36, "Payroll"), ("Later", 40, ""))
+		shortcut.add_to_sidebar()
+		self.assertEqual((self.made().parent_page or "", self.made().sequence_id), ("", 37.5))
+
+		self.site.made.clear()
+		self.site.records["Workspace"]["Config Email"].parent_page = "Payroll"
+		shortcut.add_to_sidebar()
+		self.assertEqual((self.made().parent_page or "", self.made().sequence_id), ("Payroll", 35.5))
+
+	def test_without_config_email_the_entry_goes_last(self):
+		self.sidebar(("Build", 33, ""), ("Tax", 38, "Payroll"))
+		shortcut.add_to_sidebar()
+		self.assertEqual((self.made().parent_page or "", self.made().sequence_id), ("", 34))
+
+	def test_an_entry_already_in_place_is_not_saved_again(self):
+		self.sidebar(("Config Email", 35, ""))
+		entry = self.site.add("Workspace", shortcut.SIDEBAR, public=1, label=shortcut.SIDEBAR)
+		shortcut.add_to_sidebar()
+		shortcut.add_to_sidebar()
+		self.assertEqual((entry.calls, entry.sequence_id, entry.title), (["save"], 36, "Business Rules"))
+
+		# Moved, or opened to another role on the site: put back on the next migrate.
+		entry.sequence_id = 3
+		entry.append("roles", {"role": "Employee"})
+		shortcut.add_to_sidebar()
+		self.assertEqual((entry.calls, entry.sequence_id), (["save", "save"], 36))
+		self.assertEqual([r.role for r in entry.roles], ["System Manager"])
+		self.assertEqual((len(entry.shortcuts), entry.content.count("Business Rules")), (1, 1))
+
+	def test_the_sidebar_entry_never_stops_a_migrate(self):
+		self.sidebar(("Config Email", 35, ""))
+		with patch("frappe.get_all", side_effect=RuntimeError("Workspace is broken")):
+			shortcut.add_to_sidebar()
+		self.assertEqual(len(self.site.errors), 1)
+		self.assertEqual(self.site.made[0].calls, [])
+
+
 if __name__ == "__main__":
 	unittest.main()
