@@ -919,8 +919,8 @@
   },
   "XX-06": {
    "title": "Only system managers see this page",
-   "plain": "The page, its data and its shortcut on the Home workspace are for system managers only.",
-   "source": "5736e420d3"
+   "plain": "The page and its data are for system managers only. They reach it from the Home workspace or from the sidebar, below Config Email. People who manage workspaces also see the sidebar entry, but the page stays closed to them unless they are system managers.",
+   "source": "f19e3707a8"
   },
   "XX-07": {
    "title": "Changes made on the site are shown",
