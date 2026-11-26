@@ -60,6 +60,10 @@
    "name": "Who sees what",
    "summary": "Which records each role finds in its lists."
   },
+  "ED": {
+   "name": "EOMS documents",
+   "summary": "Documents everyone reads in the Desk, page by page, without downloading them. Only system managers add or change them."
+  },
   "VN": {
    "name": "Vendors",
    "summary": "How vendors are registered and numbered."
@@ -736,6 +740,46 @@
    "title": "Access follows the role profile",
    "plain": "An employee is limited to their own record and company. HR and Admin are not, and can also send from the other companies' mailboxes.",
    "source": "6e3c47fa6c"
+  },
+  "ED-01": {
+   "title": "Everyone reads, system managers change",
+   "plain": "Everyone who works in the Desk can open EOMS documents and their departments. Only system managers add, change or delete them, and only they see the New button.",
+   "source": "6ed33e4751"
+  },
+  "ED-02": {
+   "title": "Each document has a company and a department",
+   "plain": "A document needs a company and a department. A sub-department is optional. Departments and sub-departments are names of their own, not the departments used by HR.",
+   "source": "743f0f1fce"
+  },
+  "ED-03": {
+   "title": "Only PDF and Word files, kept private",
+   "plain": "The document must be a PDF or Word file, uploaded as private. A file renamed to look like one is refused. The file's name becomes the document's title.",
+   "source": "08ea1e3f78"
+  },
+  "ED-04": {
+   "title": "Read in the Desk, never downloaded",
+   "plain": "Everyone reads the whole document on its page in the Desk, as pictures of its pages. The file itself is shown and sent to system managers only.",
+   "source": "5800c6ed9b"
+  },
+  "ED-05": {
+   "title": "Only system managers can download",
+   "plain": "Nobody but a system manager can download the file, by its link or in any other way the system offers. Files of other records work as before.",
+   "source": "6bd14269a6"
+  },
+  "ED-06": {
+   "title": "Pages load as you scroll",
+   "plain": "Only the pages near where the reader is are loaded, so a long document uses little data. A page already seen is not loaded again.",
+   "source": "71745d62cf"
+  },
+  "ED-07": {
+   "title": "Word files are shown as PDF",
+   "plain": "A Word document is turned into PDF when it is saved, and its pages are shown from that. If the server cannot do this, the save is refused with a message.",
+   "source": "380adb55b6"
+  },
+  "ED-08": {
+   "title": "EOMS Docs is in the sidebar",
+   "plain": "EOMS Docs is in the sidebar for everyone, between HR and Vendor and Assets, and opens the list of documents.",
+   "source": "99c46c26eb"
   },
   "VN-01": {
    "title": "How vendors are numbered",

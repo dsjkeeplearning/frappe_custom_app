@@ -13,6 +13,8 @@ override_doctype_class = {
     "Shift Request": "custom_app.overrides.shift_request.CustomShiftRequest",
     "Salary Slip": "custom_app.overrides.salary_slip.CustomSalarySlip",
     "Material Request": "custom_app.overrides.material_request.CustomMaterialRequest",
+    # Files of EOMS Docs are downloaded only by System Managers (overrides/file.py).
+    "File": "custom_app.overrides.file.CustomFile",
 }
 
 override_whitelisted_methods = {
@@ -24,6 +26,7 @@ override_whitelisted_methods = {
         "custom_app.overrides.material_request.make_purchase_order",
 	"erpnext.buying.doctype.request_for_quotation.request_for_quotation.make_supplier_quotation_from_rfq":
 	    "custom_app.overrides.rfq.make_supplier_quotation_from_rfq",
+    "frappe.core.api.file.zip_files": "custom_app.overrides.file.zip_files",
 }
 
 doc_events = {
@@ -113,7 +116,8 @@ permission_query_conditions = {
 }
 
 has_permission = {
-    "Salary Slip": "custom_app.permissions.salary_slip.has_permission"
+    "Salary Slip": "custom_app.permissions.salary_slip.has_permission",
+    "File": "custom_app.overrides.file.has_permission",
 }
 
 doctype_js = {
@@ -139,11 +143,11 @@ scheduler_events = {
     }
 }
 
-# Business Rules on Home and in the sidebar below Config Email, for System Managers
-# (business_rules/shortcut.py).
+# Business Rules on Home (business_rules/shortcut.py), and the app's sidebar entries:
+# Business Rules below Config Email, EOMS Docs between HR and Vendor & Assets (sidebar.py).
 after_migrate = [
     "custom_app.business_rules.shortcut.add_to_home",
-    "custom_app.business_rules.shortcut.add_to_sidebar",
+    "custom_app.sidebar.add_entries",
 ]
 
 fixtures = [
