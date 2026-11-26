@@ -919,8 +919,8 @@
   },
   "XX-06": {
    "title": "Only system managers see this page",
-   "plain": "The page and its data are for system managers only.",
-   "source": "7a6cc96225"
+   "plain": "The page, its data and its shortcut on the Home workspace are for system managers only.",
+   "source": "5736e420d3"
   },
   "XX-07": {
    "title": "Changes made on the site are shown",

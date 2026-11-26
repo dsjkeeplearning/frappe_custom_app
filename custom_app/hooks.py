@@ -139,6 +139,9 @@ scheduler_events = {
     }
 }
 
+# A Business Rules shortcut on Home, for System Managers (business_rules/shortcut.py).
+after_migrate = ["custom_app.business_rules.shortcut.add_to_home"]
+
 fixtures = [
     {
         "doctype": "Workspace", 
