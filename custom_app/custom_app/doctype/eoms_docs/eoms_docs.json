@@ -1,0 +1,128 @@
+{
+ "actions": [],
+ "autoname": "EOMS-DOC-.#####",
+ "creation": "2026-11-26 10:00:00.000000",
+ "description": "Documents everyone reads in the Desk, page by page, without downloading them. Only System Managers add, change or delete them.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "department",
+  "column_break_eoms1",
+  "sub_department",
+  "document_name",
+  "section_break_eoms2",
+  "upload_doc",
+  "preview_pdf",
+  "viewer"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Department",
+   "options": "EOMS Department",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_eoms1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sub_department",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Sub-Department",
+   "options": "EOMS Sub Department"
+  },
+  {
+   "bold": 1,
+   "description": "Taken from the uploaded file.",
+   "fieldname": "document_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Document Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_eoms2",
+   "fieldtype": "Section Break",
+   "label": "Document"
+  },
+  {
+   "description": "A PDF, DOC or DOCX file, uploaded as private. Readers see its pages, never the file.",
+   "fieldname": "upload_doc",
+   "fieldtype": "Attach",
+   "label": "Upload Doc",
+   "permlevel": 1,
+   "reqd": 1
+  },
+  {
+   "description": "The PDF made from a Word file, that its pages are drawn from.",
+   "fieldname": "preview_pdf",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Preview PDF",
+   "no_copy": 1,
+   "permlevel": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "viewer",
+   "fieldtype": "HTML",
+   "label": "Viewer"
+  }
+ ],
+ "links": [],
+ "make_attachments_public": 0,
+ "modified": "2026-11-26 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Custom App",
+ "name": "EOMS Docs",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Desk User"
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "document_name,department,sub_department,company",
+ "show_title_field_in_link": 0,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "document_name",
+ "track_changes": 1
+}

@@ -59,7 +59,7 @@ class Doc:
 	def add_comment(self, kind, text):
 		self.calls.append(("comment", text))
 
-	def db_set(self, field, value):
+	def db_set(self, field, value, **kwargs):
 		setattr(self, field, value)
 
 	def _did(self, what):

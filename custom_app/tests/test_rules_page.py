@@ -8,11 +8,12 @@ No site or database is needed, see fake_site:
 
 import json
 import unittest
-from unittest.mock import patch
 from pathlib import Path
+from unittest.mock import patch
 
 import frappe
 
+from custom_app import sidebar
 from custom_app.business_rules import catalogue, shortcut, site
 from custom_app.custom_app.page.business_rules import business_rules
 from custom_app.tests.fake_site import Doc, SiteTest
@@ -204,18 +205,22 @@ def address(name):
 
 
 class TestSidebar(SiteTest):
+	"""The Business Rules entry of sidebar.py. The EOMS Docs entry is in test_rules_eoms."""
+
+	SIDEBAR = "Business Rules Sidebar"
+
 	def sidebar(self, *entries):
 		for name, sequence, parent in entries:
 			self.site.add("Workspace", name, public=1, sequence_id=sequence, parent_page=parent)
 
 	def made(self):
-		[entry] = self.site.made
+		[entry] = [doc for doc in self.site.made if doc.label == self.SIDEBAR]
 		self.assertEqual(entry.calls, ["save"])
 		return entry
 
 	def test_the_sidebar_entry_opens_the_page_for_system_managers(self):
 		self.sidebar(("Build", 33, ""), ("Config Email", 35, ""))
-		shortcut.add_to_sidebar()
+		sidebar.add_entries()
 		entry = self.made()
 		page = json.loads(PAGE.read_text(encoding="utf-8"))
 		# The sidebar links to the address of the title, the page; the entry's own name has another.
@@ -228,30 +233,30 @@ class TestSidebar(SiteTest):
 
 	def test_the_entry_goes_right_below_config_email(self):
 		self.sidebar(("Build", 33, ""), ("Config Email", 35, ""), ("Tax", 36, "Payroll"), ("Later", 40, ""))
-		shortcut.add_to_sidebar()
+		sidebar.add_entries()
 		self.assertEqual((self.made().parent_page or "", self.made().sequence_id), ("", 37.5))
 
 		self.site.made.clear()
 		self.site.records["Workspace"]["Config Email"].parent_page = "Payroll"
-		shortcut.add_to_sidebar()
+		sidebar.add_entries()
 		self.assertEqual((self.made().parent_page or "", self.made().sequence_id), ("Payroll", 35.5))
 
 	def test_without_config_email_the_entry_goes_last(self):
 		self.sidebar(("Build", 33, ""), ("Tax", 38, "Payroll"))
-		shortcut.add_to_sidebar()
+		sidebar.add_entries()
 		self.assertEqual((self.made().parent_page or "", self.made().sequence_id), ("", 34))
 
 	def test_an_entry_already_in_place_is_not_saved_again(self):
 		self.sidebar(("Config Email", 35, ""))
-		entry = self.site.add("Workspace", shortcut.SIDEBAR, public=1, label=shortcut.SIDEBAR)
-		shortcut.add_to_sidebar()
-		shortcut.add_to_sidebar()
+		entry = self.site.add("Workspace", self.SIDEBAR, public=1, label=self.SIDEBAR)
+		sidebar.add_entries()
+		sidebar.add_entries()
 		self.assertEqual((entry.calls, entry.sequence_id, entry.title), (["save"], 36, "Business Rules"))
 
 		# Moved, or opened to another role on the site: put back on the next migrate.
 		entry.sequence_id = 3
 		entry.append("roles", {"role": "Employee"})
-		shortcut.add_to_sidebar()
+		sidebar.add_entries()
 		self.assertEqual((entry.calls, entry.sequence_id), (["save", "save"], 36))
 		self.assertEqual([r.role for r in entry.roles], ["System Manager"])
 		self.assertEqual((len(entry.shortcuts), entry.content.count("Business Rules")), (1, 1))
@@ -259,9 +264,9 @@ class TestSidebar(SiteTest):
 	def test_the_sidebar_entry_never_stops_a_migrate(self):
 		self.sidebar(("Config Email", 35, ""))
 		with patch("frappe.get_all", side_effect=RuntimeError("Workspace is broken")):
-			shortcut.add_to_sidebar()
-		self.assertEqual(len(self.site.errors), 1)
-		self.assertEqual(self.site.made[0].calls, [])
+			sidebar.add_entries()
+		self.assertEqual(len(self.site.errors), len(sidebar.ENTRIES))
+		self.assertEqual([doc.calls for doc in self.site.made], [[]] * len(sidebar.ENTRIES))
 
 
 if __name__ == "__main__":
