@@ -79,14 +79,8 @@ def page():
 				"group": rule["group"],
 				"title": words["rules"][rule["id"]]["title"],
 				"plain": words["rules"][rule["id"]]["plain"],
-				"proof": proof(rule["test"]),
 			}
 			for rule in rules()
 		],
 	}
 
-
-def proof(test):
-	if SEEN_ON_SITE.match(test):
-		return "site"
-	return "untested" if test == NO_TEST else "tested"

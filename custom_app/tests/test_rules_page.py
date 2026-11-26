@@ -8,13 +8,14 @@ No site or database is needed, see fake_site:
 
 import json
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 import frappe
 
-from custom_app.business_rules import catalogue, site
+from custom_app.business_rules import catalogue, shortcut, site
 from custom_app.custom_app.page.business_rules import business_rules
-from custom_app.tests.fake_site import SiteTest
+from custom_app.tests.fake_site import Doc, SiteTest
 
 PAGE = Path(business_rules.__file__).parent / "business_rules.json"
 
@@ -58,7 +59,6 @@ class TestReaders(SiteTest):
 		page = business_rules.get()
 		self.assertEqual([r["id"] for r in page["rules"]], [r["id"] for r in catalogue.rules()])
 		self.assertTrue(all(r["title"] and r["plain"] for r in page["rules"]))
-		self.assertEqual({r["proof"] for r in page["rules"]}, {"tested", "untested", "site"})
 
 
 class TestSite(SiteTest):
@@ -154,6 +154,48 @@ class TestSite(SiteTest):
 		self.site.add("Budget Settings", "Budget Settings", restrict_backdated_pr=1)
 		self.site.add("Verifier PR Details", "v", parent="Verifier PR Settings")
 		self.assertEqual([s["value"] for s in site.settings()], ["On", "Off", "Off", "1"])
+
+
+class TestShortcut(SiteTest):
+	def home(self):
+		blocks = [
+			{"id": "a", "type": "header", "data": {"text": "Your Shortcuts"}},
+			{"id": "b", "type": "shortcut", "data": {"shortcut_name": "Item", "col": 3}},
+			{"id": "c", "type": "shortcut", "data": {"shortcut_name": "Customer", "col": 3}},
+			{"id": "d", "type": "header", "data": {"text": "Reports & Masters"}},
+			{"id": "e", "type": "card", "data": {"card_name": "Accounting", "col": 4}},
+		]
+		return self.site.add(
+			"Workspace",
+			"Home",
+			shortcuts=[Doc(type="DocType", link_to="Item", label="Item")],
+			content=json.dumps(blocks),
+		)
+
+	def test_the_shortcut_goes_after_homes_last_shortcut(self):
+		home = self.home()
+		shortcut.add_to_home()
+		self.assertEqual(home.calls, ["save"])
+		added = home.shortcuts[-1]
+		self.assertEqual((added.type, added.link_to, added.label), ("Page", "business-rules", "Business Rules"))
+		self.assertEqual(json.loads(PAGE.read_text(encoding="utf-8"))["name"], added.link_to)
+		names = [b["data"].get("shortcut_name") for b in json.loads(home.content)]
+		self.assertEqual(names, [None, "Item", "Customer", "Business Rules", None, None])
+
+	def test_a_shortcut_already_there_is_not_added_again(self):
+		home = self.home()
+		shortcut.add_to_home()
+		shortcut.add_to_home()
+		self.assertEqual((home.calls, len(home.shortcuts)), (["save"], 2))
+		self.assertEqual(home.content.count("Business Rules"), 1)
+
+	def test_the_shortcut_never_stops_a_migrate(self):
+		shortcut.add_to_home()
+		self.assertEqual(self.site.errors, [])
+		self.home()
+		with patch("frappe.get_doc", side_effect=RuntimeError("Home is broken")):
+			shortcut.add_to_home()
+		self.assertEqual(len(self.site.errors), 1)
 
 
 if __name__ == "__main__":
