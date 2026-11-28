@@ -194,7 +194,7 @@ class FakeSite:
 		return doc
 
 	def copy_doc(self, doc, **kwargs):
-		copy = Doc(doc.doctype, **{k: v for k, v in doc.__dict__.items() if k not in ("calls", "flags")})
+		copy = Doc(doc.doctype, **{k: v for k, v in doc.__dict__.items() if k not in ("calls", "flags", "doctype")})
 		copy.new = True
 		self.made.append(copy)
 		return copy

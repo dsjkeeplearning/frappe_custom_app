@@ -207,34 +207,34 @@
    "source": "35e53f9d6b"
   },
   "BR-02": {
-   "title": "An approved reallocation changes one month",
-   "plain": "Approval changes the chosen month only. The other months keep their amounts, and the new figure counts at once.",
-   "source": "e0f9f126dc"
+   "title": "An approved reallocation moves budget in one step",
+   "plain": "Approval takes the amount off one month and adds it to the other at once. Every other month keeps its amount, and the new figures count straight away.",
+   "source": "cc277fe22b"
   },
   "BR-03": {
    "title": "A reallocation shows before and after",
-   "plain": "The form shows the month's present budget, the change and the new total of the year.",
-   "source": "e91edda018"
+   "plain": "The form shows each side's month and year before and after the move, what the giving month has used, and what is left to move.",
+   "source": "5e01642e7c"
   },
   "BR-04": {
-   "title": "A reallocation needs a budget and a reason",
-   "plain": "Only an account that already has a budget can be reallocated, and a reason must be given.",
-   "source": "f1b994ed34"
+   "title": "A reallocation needs budgets and a reason",
+   "plain": "Both accounts must already have an approved budget, and a reason must be given. The lists offer only cost centers and accounts that have a budget for the year.",
+   "source": "96e588304d"
   },
   "BR-05": {
-   "title": "A month cannot be cut below what it used",
-   "plain": "A reduction is refused when the month has already used more. Requests, claims and journal entries all count as used.",
-   "source": "6c297d7a7d"
+   "title": "Only what is left can move",
+   "plain": "A month can give only the budget it has not used. Requests, claims and journal entries all count as used. When unused budget rolls forward, the later months must stay covered too.",
+   "source": "c128a7a893"
   },
   "BR-06": {
-   "title": "An increase needs room in the Master Budget",
-   "plain": "A month can be raised only when the cost center still has room in the Master Budget.",
-   "source": "e7626bf671"
+   "title": "Reallocations made the old way are kept as a record",
+   "plain": "A reallocation made with the earlier form, for one account and month, stays as it is. It can't be changed, approved or rejected. A new reallocation is always one of the three ways to move budget.",
+   "source": "b92fd96da9"
   },
   "BR-07": {
    "title": "Who approved a reallocation is recorded",
-   "plain": "The reallocation keeps the old budget, the new budget, the approver and the time.",
-   "source": "1bea77def7"
+   "plain": "The reallocation keeps the approver, the time, and the old and new version of each budget it changed.",
+   "source": "303c6e34a1"
   },
   "BR-08": {
    "title": "An upload makes one budget per account",
@@ -296,6 +296,31 @@
    "plain": "Cancelling would not bring the old budgets back. Upload a corrected file instead.",
    "source": "36a6f4ea48"
   },
+  "BR-20": {
+   "title": "Three ways to move budget",
+   "plain": "Within the same month moves budget between two accounts of one cost center. Carry forward moves an account's budget from one month to another. Inter department transfer moves it between cost centers. The company, the year and the amount are the same on both sides.",
+   "source": "3091792007"
+  },
+  "BR-21": {
+   "title": "Inter department transfer must be turned on",
+   "plain": "This way of moving budget is offered only while Budget Settings allow it, and only a System Manager can turn it on or off.",
+   "source": "a44b203b9f"
+  },
+  "BR-22": {
+   "title": "Master Budget limits move with an inter department transfer",
+   "plain": "On approval the giving cost center's limit goes down by the amount and the receiving one's goes up. A limit too small to give the amount stops the transfer.",
+   "source": "24b009daa0"
+  },
+  "BR-23": {
+   "title": "An account always keeps some budget",
+   "plain": "A transfer cannot take away all of an account's budget for the year.",
+   "source": "08009ab1a3"
+  },
+  "BR-24": {
+   "title": "Old reallocations are marked",
+   "plain": "Reallocations made before the three ways to move budget are marked as single account reallocations when the site is updated.",
+   "source": "e6758186ec"
+  },
   "RP-01": {
    "title": "The report shows what a request can use",
    "plain": "The amount left in the Budget Availability report is exactly what a new request can use.",
@@ -323,8 +348,8 @@
   },
   "RP-06": {
    "title": "Every version of a budget can be seen",
-   "plain": "The report lists each change of a budget, back to the first version, with reason and approver.",
-   "source": "f70973e5e8"
+   "plain": "The report lists each change of a budget, back to the first version, with reason and approver. A transfer shows the months it changed.",
+   "source": "43b5cd0a21"
   },
   "RP-07": {
    "title": "Heads see only their own department",

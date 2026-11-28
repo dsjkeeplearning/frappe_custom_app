@@ -8,11 +8,41 @@
  "engine": "InnoDB",
  "field_order": [
   "naming_series",
+  "reallocation_type",
   "company",
-  "cost_center",
   "column_break_1",
   "fiscal_year",
+  "amount",
+  "from_section",
+  "from_cost_center",
+  "from_account",
+  "from_month",
+  "column_break_from",
+  "from_month_budget",
+  "from_month_used",
+  "left_to_move",
+  "from_new_month_budget",
+  "from_year_budget",
+  "from_new_year_budget",
+  "to_section",
+  "to_cost_center",
+  "to_account",
+  "to_month",
+  "column_break_to",
+  "to_month_budget",
+  "to_new_month_budget",
+  "to_year_budget",
+  "to_new_year_budget",
+  "master_budget_section",
+  "from_master_limit",
+  "from_new_master_limit",
+  "column_break_master",
+  "to_master_limit",
+  "to_new_master_limit",
+  "single_account_section",
+  "cost_center",
   "account",
+  "column_break_single",
   "month",
   "section_break_2",
   "current_budget",
@@ -27,14 +57,20 @@
   "master_budget_limit",
   "total_allocated_budget",
   "amended_from",
-  "section_break_ovrx",
-  "old_budget_link",
-  "approver",
-  "column_break_fjxf",
-  "new_budget_link",
-  "approval_date",
   "reason_section",
-  "reason"
+  "reason",
+  "section_break_ovrx",
+  "approver",
+  "from_old_budget",
+  "to_old_budget",
+  "old_master_budget",
+  "old_budget_link",
+  "column_break_fjxf",
+  "approval_date",
+  "from_new_budget",
+  "to_new_budget",
+  "new_master_budget",
+  "new_budget_link"
  ],
  "fields": [
   {
@@ -45,19 +81,19 @@
    "reqd": 1
   },
   {
-   "fieldname": "company",
-   "fieldtype": "Link",
+   "fieldname": "reallocation_type",
+   "fieldtype": "Select",
    "in_list_view": 1,
-   "label": "Company",
-   "options": "Company",
+   "in_standard_filter": 1,
+   "label": "Transfer Type",
+   "options": "Within Same Month\nCarry Forward\nInter Department Transfer\nSingle Account",
    "reqd": 1
   },
   {
-   "fieldname": "cost_center",
+   "fieldname": "company",
    "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Cost Center",
-   "options": "Cost Center",
+   "label": "Company",
+   "options": "Company",
    "reqd": 1
   },
   {
@@ -67,28 +103,231 @@
   {
    "fieldname": "fiscal_year",
    "fieldtype": "Link",
-   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Fiscal Year",
    "options": "Fiscal Year",
    "reqd": 1
   },
   {
-   "fieldname": "account",
+   "depends_on": "eval:['Within Same Month','Carry Forward','Inter Department Transfer'].includes(doc.reallocation_type)",
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount to Move",
+   "mandatory_depends_on": "eval:['Within Same Month','Carry Forward','Inter Department Transfer'].includes(doc.reallocation_type)",
+   "non_negative": 1
+  },
+  {
+   "depends_on": "eval:['Within Same Month','Carry Forward','Inter Department Transfer'].includes(doc.reallocation_type)",
+   "fieldname": "from_section",
+   "fieldtype": "Section Break",
+   "label": "Move From"
+  },
+  {
+   "fieldname": "from_cost_center",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "From Cost Center",
+   "mandatory_depends_on": "eval:['Within Same Month','Carry Forward','Inter Department Transfer'].includes(doc.reallocation_type)",
+   "options": "Cost Center"
+  },
+  {
+   "fieldname": "from_account",
    "fieldtype": "Link",
    "in_list_view": 1,
+   "label": "From Account",
+   "mandatory_depends_on": "eval:['Within Same Month','Carry Forward','Inter Department Transfer'].includes(doc.reallocation_type)",
+   "options": "Account"
+  },
+  {
+   "fieldname": "from_month",
+   "fieldtype": "Select",
+   "label": "From Month",
+   "mandatory_depends_on": "eval:['Within Same Month','Carry Forward','Inter Department Transfer'].includes(doc.reallocation_type)",
+   "options": "April\nMay\nJune\nJuly\nAugust\nSeptember\nOctober\nNovember\nDecember\nJanuary\nFebruary\nMarch"
+  },
+  {
+   "fieldname": "column_break_from",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "from_month_budget",
+   "fieldtype": "Currency",
+   "label": "Month Budget Now",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "from_month_used",
+   "fieldtype": "Currency",
+   "label": "Used in the Month",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "left_to_move",
+   "fieldtype": "Currency",
+   "label": "Left to Move",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "from_new_month_budget",
+   "fieldtype": "Currency",
+   "label": "Month Budget After",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "from_year_budget",
+   "fieldtype": "Currency",
+   "label": "Year Budget Now",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "from_new_year_budget",
+   "fieldtype": "Currency",
+   "label": "Year Budget After",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:['Within Same Month','Carry Forward','Inter Department Transfer'].includes(doc.reallocation_type)",
+   "fieldname": "to_section",
+   "fieldtype": "Section Break",
+   "label": "Move To"
+  },
+  {
+   "fieldname": "to_cost_center",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "To Cost Center",
+   "mandatory_depends_on": "eval:['Within Same Month','Carry Forward','Inter Department Transfer'].includes(doc.reallocation_type)",
+   "options": "Cost Center",
+   "read_only_depends_on": "eval:doc.reallocation_type!='Inter Department Transfer'"
+  },
+  {
+   "fieldname": "to_account",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "To Account",
+   "mandatory_depends_on": "eval:['Within Same Month','Carry Forward','Inter Department Transfer'].includes(doc.reallocation_type)",
+   "options": "Account",
+   "read_only_depends_on": "eval:doc.reallocation_type=='Carry Forward'"
+  },
+  {
+   "fieldname": "to_month",
+   "fieldtype": "Select",
+   "label": "To Month",
+   "mandatory_depends_on": "eval:['Within Same Month','Carry Forward','Inter Department Transfer'].includes(doc.reallocation_type)",
+   "options": "April\nMay\nJune\nJuly\nAugust\nSeptember\nOctober\nNovember\nDecember\nJanuary\nFebruary\nMarch",
+   "read_only_depends_on": "eval:doc.reallocation_type=='Within Same Month'"
+  },
+  {
+   "fieldname": "column_break_to",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "to_month_budget",
+   "fieldtype": "Currency",
+   "label": "Month Budget Now",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "to_new_month_budget",
+   "fieldtype": "Currency",
+   "label": "Month Budget After",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "to_year_budget",
+   "fieldtype": "Currency",
+   "label": "Year Budget Now",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "to_new_year_budget",
+   "fieldtype": "Currency",
+   "label": "Year Budget After",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.reallocation_type=='Inter Department Transfer'",
+   "description": "The two cost centers' limits in the Master Budget. Approval amends the Master Budget with the limits after the move. A cost center with no row in it shows no limit and is left as it is.",
+   "fieldname": "master_budget_section",
+   "fieldtype": "Section Break",
+   "label": "Master Budget"
+  },
+  {
+   "fieldname": "from_master_limit",
+   "fieldtype": "Currency",
+   "label": "From Cost Center's Limit Now",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "from_new_master_limit",
+   "fieldtype": "Currency",
+   "label": "From Cost Center's Limit After",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_master",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "to_master_limit",
+   "fieldtype": "Currency",
+   "label": "To Cost Center's Limit Now",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "to_new_master_limit",
+   "fieldtype": "Currency",
+   "label": "To Cost Center's Limit After",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.reallocation_type=='Single Account'",
+   "fieldname": "single_account_section",
+   "fieldtype": "Section Break",
+   "label": "Account and Month"
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center",
+   "read_only": 1
+  },
+  {
+   "fieldname": "account",
+   "fieldtype": "Link",
    "label": "Account",
    "options": "Account",
-   "reqd": 1
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_single",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "month",
    "fieldtype": "Select",
-   "in_list_view": 1,
    "label": "Month",
    "options": "April\nMay\nJune\nJuly\nAugust\nSeptember\nOctober\nNovember\nDecember\nJanuary\nFebruary\nMarch",
-   "reqd": 1
+   "read_only": 1
   },
   {
+   "depends_on": "eval:doc.reallocation_type=='Single Account'",
    "fieldname": "section_break_2",
    "fieldtype": "Section Break",
    "label": "Budget Details"
@@ -102,9 +341,8 @@
   {
    "fieldname": "new_budget",
    "fieldtype": "Currency",
-   "in_list_view": 1,
    "label": "New Month Budget",
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "column_break_3",
@@ -123,6 +361,7 @@
    "read_only": 1
   },
   {
+   "depends_on": "eval:doc.reallocation_type=='Single Account'",
    "fieldname": "section_break_4",
    "fieldtype": "Section Break",
    "label": "Annual Budget Summary"
@@ -178,10 +417,42 @@
   {
    "fieldname": "section_break_ovrx",
    "fieldtype": "Section Break",
-   "label": "Information"
+   "label": "Approval"
+  },
+  {
+   "fieldname": "approver",
+   "fieldtype": "Link",
+   "label": "Approver",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "from_old_budget",
+   "fieldtype": "Link",
+   "label": "From Account's Old Budget",
+   "no_copy": 1,
+   "options": "Budget",
+   "read_only": 1
+  },
+  {
+   "fieldname": "to_old_budget",
+   "fieldtype": "Link",
+   "label": "To Account's Old Budget",
+   "no_copy": 1,
+   "options": "Budget",
+   "read_only": 1
+  },
+  {
+   "fieldname": "old_master_budget",
+   "fieldtype": "Link",
+   "label": "Old Master Budget",
+   "no_copy": 1,
+   "options": "Master Budget",
+   "read_only": 1
   },
   {
    "allow_on_submit": 1,
+   "depends_on": "eval:doc.reallocation_type=='Single Account'",
    "fieldname": "old_budget_link",
    "fieldtype": "Link",
    "label": "Old Budget Link",
@@ -193,31 +464,49 @@
    "fieldtype": "Column Break"
   },
   {
-   "allow_on_submit": 1,
-   "fieldname": "new_budget_link",
+   "fieldname": "approval_date",
+   "fieldtype": "Datetime",
+   "label": "Approval Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "from_new_budget",
    "fieldtype": "Link",
-   "label": "New Budget Link",
+   "label": "From Account's New Budget",
+   "no_copy": 1,
    "options": "Budget",
    "read_only": 1
   },
   {
-   "fieldname": "approver",
+   "fieldname": "to_new_budget",
    "fieldtype": "Link",
-   "label": "Approver",
-   "options": "User",
+   "label": "To Account's New Budget",
+   "no_copy": 1,
+   "options": "Budget",
    "read_only": 1
   },
   {
-   "fieldname": "approval_date",
-   "fieldtype": "Datetime",
-   "label": "Approval Date",
+   "fieldname": "new_master_budget",
+   "fieldtype": "Link",
+   "label": "New Master Budget",
+   "no_copy": 1,
+   "options": "Master Budget",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.reallocation_type=='Single Account'",
+   "fieldname": "new_budget_link",
+   "fieldtype": "Link",
+   "label": "New Budget Link",
+   "options": "Budget",
    "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-26 12:05:21.916940",
+ "modified": "2026-11-28 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Custom App",
  "name": "Budget Reallocation",

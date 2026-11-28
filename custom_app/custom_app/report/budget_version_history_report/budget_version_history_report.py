@@ -26,18 +26,20 @@ def execute(filters=None):
 	last_new_annual_budget = None
     
 	while reallocation:
-		rows.append({
-			"month": reallocation.month or "-",
-			"old_budget": reallocation.current_budget or "-",
-			"new_budget": reallocation.new_budget or "-",
-			"old_annual_budget": reallocation.total_annual_budget or "-",
-			"new_annual_budget": reallocation.new_total_annual_budget or "-",
-			"reason": reallocation.reason or "-",
-			"old_budget_link": reallocation.old_budget_link or "-",
-			"new_budget_link": current_new_budget_link,
-            "approver": reallocation.approver or "-",
-            "approval_date": reallocation.approval_date or "-",
-		})
+		# A transfer within one account changes two of its months: one row each.
+		for month in reallocation.get("months") or [reallocation]:
+			rows.append({
+				"month": month.month or "-",
+				"old_budget": "-" if month.current_budget is None else month.current_budget,
+				"new_budget": "-" if month.new_budget is None else month.new_budget,
+				"old_annual_budget": reallocation.total_annual_budget or "-",
+				"new_annual_budget": reallocation.new_total_annual_budget or "-",
+				"reason": reallocation.reason or "-",
+				"old_budget_link": reallocation.old_budget_link or "-",
+				"new_budget_link": current_new_budget_link,
+				"approver": reallocation.approver or "-",
+				"approval_date": reallocation.approval_date or "-",
+			})
 
 		last_new_annual_budget = reallocation.total_annual_budget
 
@@ -120,7 +122,77 @@ def get_reallocation_by_new_link(budget_name):
         as_dict=True
     )
 
-    return reallocation or get_mid_year_upload_by_new_link(budget_name)
+    return (
+        reallocation
+        or get_transfer_by_new_link(budget_name)
+        or get_mid_year_upload_by_new_link(budget_name)
+    )
+
+
+def get_transfer_by_new_link(budget_name):
+    """
+    A transfer that amended this Budget, from the side the Budget was on, in the
+    shape of a reallocation. A transfer within one account changed two of its
+    months, so it has a row for each.
+    """
+    fields = [
+        "name",
+        "reallocation_type",
+        "from_month",
+        "to_month",
+        "from_month_budget",
+        "from_new_month_budget",
+        "to_month_budget",
+        "to_new_month_budget",
+        "from_year_budget",
+        "from_new_year_budget",
+        "to_year_budget",
+        "to_new_year_budget",
+        "from_old_budget",
+        "from_new_budget",
+        "to_old_budget",
+        "to_new_budget",
+        "reason",
+        "approver",
+        "approval_date",
+    ]
+    for side in ("from", "to"):
+        transfer = frappe.db.get_value(
+            "Budget Reallocation",
+            {f"{side}_new_budget": budget_name, "docstatus": 1},
+            fields,
+            as_dict=True,
+        )
+        if transfer:
+            break
+    else:
+        return None
+
+    giving = frappe._dict(
+        month=transfer.from_month,
+        current_budget=transfer.from_month_budget,
+        new_budget=transfer.from_new_month_budget,
+    )
+    receiving = frappe._dict(
+        month=transfer.to_month,
+        current_budget=transfer.to_month_budget,
+        new_budget=transfer.to_new_month_budget,
+    )
+    if transfer.from_new_budget == transfer.to_new_budget:
+        months = [giving, receiving]
+    else:
+        months = [giving] if side == "from" else [receiving]
+
+    return frappe._dict(
+        name=transfer.name,
+        months=months,
+        total_annual_budget=transfer.get(f"{side}_year_budget"),
+        new_total_annual_budget=transfer.get(f"{side}_new_year_budget"),
+        reason="{0}: {1}".format(_(transfer.reallocation_type), transfer.reason),
+        old_budget_link=transfer.get(f"{side}_old_budget"),
+        approver=transfer.approver,
+        approval_date=transfer.approval_date,
+    )
 
 
 def get_mid_year_upload_by_new_link(budget_name):
