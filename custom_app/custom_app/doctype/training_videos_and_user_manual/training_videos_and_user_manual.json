@@ -1,0 +1,140 @@
+{
+ "actions": [],
+ "autoname": "TRN-.#####",
+ "creation": "2026-11-28 18:00:00.000000",
+ "description": "Training topics, each with a video, a user manual or both. Every employee watches and reads them here. Only System Managers add, change or delete them.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "topic_code",
+  "column_break_training1",
+  "sidebar_section",
+  "roles",
+  "section_break_training2",
+  "description",
+  "section_break_training3",
+  "video",
+  "video_player",
+  "section_break_training4",
+  "manual",
+  "manual_viewer"
+ ],
+ "fields": [
+  {
+   "bold": 1,
+   "description": "The topic, as in the training list. For example: Raise a purchase request.",
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "description": "Its number in the training list. For example: ER1.",
+   "fieldname": "topic_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Topic Code"
+  },
+  {
+   "fieldname": "column_break_training1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Where the topic's forms are in the sidebar.",
+   "fieldname": "sidebar_section",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Sidebar Section",
+   "options": "Shift & Attendance\nHome\nExpense & Request\nProcurement & Payment\nBudgeting\nHR\nEOMS Docs\nVendor & Assets\nAssets\nPayroll\nAdmin",
+   "reqd": 1
+  },
+  {
+   "description": "Who this topic is for. Only shown and filtered by: every employee can open every topic.",
+   "fieldname": "roles",
+   "fieldtype": "Table MultiSelect",
+   "label": "Roles Applicable",
+   "options": "Training Topic Role"
+  },
+  {
+   "fieldname": "section_break_training2",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "What It Covers"
+  },
+  {
+   "fieldname": "section_break_training3",
+   "fieldtype": "Section Break",
+   "label": "Video"
+  },
+  {
+   "description": "An MP4 or WebM file, uploaded as private. It plays here, on the page.",
+   "fieldname": "video",
+   "fieldtype": "Attach",
+   "label": "Video"
+  },
+  {
+   "depends_on": "video",
+   "fieldname": "video_player",
+   "fieldtype": "HTML",
+   "label": "Video Player"
+  },
+  {
+   "fieldname": "section_break_training4",
+   "fieldtype": "Section Break",
+   "label": "User Manual"
+  },
+  {
+   "description": "A PDF file, uploaded as private. It opens here, on the page.",
+   "fieldname": "manual",
+   "fieldtype": "Attach",
+   "label": "User Manual"
+  },
+  {
+   "depends_on": "manual",
+   "fieldname": "manual_viewer",
+   "fieldtype": "HTML",
+   "label": "Manual Viewer"
+  }
+ ],
+ "links": [],
+ "make_attachments_public": 0,
+ "modified": "2026-11-28 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Custom App",
+ "name": "Training Videos and User Manual",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Desk User"
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "topic_code,sidebar_section",
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}

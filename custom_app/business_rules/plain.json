@@ -64,6 +64,10 @@
    "name": "EOMS documents",
    "summary": "Documents everyone reads in the Desk, page by page, without downloading them. Only system managers add or change them."
   },
+  "TR": {
+   "name": "Training videos and user manuals",
+   "summary": "Each training topic has a short video, a user manual or both, that every employee opens on the site. Only system managers add or change them."
+  },
   "VN": {
    "name": "Vendors",
    "summary": "How vendors are registered and numbered."
@@ -805,6 +809,31 @@
    "title": "EOMS Docs is in the sidebar",
    "plain": "EOMS Docs is in the sidebar for everyone, between HR and Vendor and Assets, and opens the list of documents.",
    "source": "99c46c26eb"
+  },
+  "TR-01": {
+   "title": "Everyone watches, system managers change",
+   "plain": "Everyone who works in the Desk can open the training topics. Only system managers add, change or delete them, and only they see the New button.",
+   "source": "7b89f2ccdc"
+  },
+  "TR-02": {
+   "title": "Roles show who a topic is for",
+   "plain": "Each topic lists the roles it is meant for, and the list of topics can be filtered by role. Every employee can still open every topic.",
+   "source": "dd42c42293"
+  },
+  "TR-03": {
+   "title": "A video, a manual or both",
+   "plain": "A topic needs a title, its place in the sidebar, and a video, a user manual or both. The video is an MP4 or WebM file and the manual a PDF, both uploaded as private. A file renamed to look like one is refused.",
+   "source": "1f1fc63017"
+  },
+  "TR-04": {
+   "title": "Watched and read on the site",
+   "plain": "The video plays and the manual opens right on the topic's page. The files reach only people who are signed in and may open the topic. A video can be skipped through, and stops when the user leaves the page.",
+   "source": "71179ed1ce"
+  },
+  "TR-05": {
+   "title": "Training is in the sidebar",
+   "plain": "Training Videos and User Manual is in the sidebar for everyone, right below Business Rules, and opens the list of topics. It stays in its place after each update.",
+   "source": "fd3b490797"
   },
   "VN-01": {
    "title": "How vendors are numbered",
