@@ -18,7 +18,7 @@ TABS = [
 	{"key": "purchase", "label": "Request to order", "groups": ["PR", "SQ", "PO"]},
 	{"key": "payment", "label": "Invoice, payment, claims", "groups": ["PI", "PE", "EC"]},
 	{"key": "people", "label": "Attendance and payroll", "groups": ["AT", "LV", "PY"]},
-	{"key": "access", "label": "Approvals and access", "groups": ["WF", "AC", "ED"]},
+	{"key": "access", "label": "Approvals and access", "groups": ["WF", "AC", "ED", "TR"]},
 	{"key": "vendor", "label": "Vendors, emails, dashboards", "groups": ["VN", "EM", "DB"]},
 	{"key": "site", "label": "On this site", "groups": ["ST"]},
 	{"key": "trust", "label": "Keeping rules true", "groups": ["XX"]},

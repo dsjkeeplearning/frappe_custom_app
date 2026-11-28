@@ -2,16 +2,19 @@
 
 The v15 sidebar lists only workspaces, so each entry is a small workspace whose title is
 the entry's label. The sidebar links to the address of the title, so the entry opens what
-its title names: the Business Rules page, the EOMS Docs list. The workspace's own name is
-different, because a workspace with that name would take the address over. Frappe checks
-the title against other names only outside a migrate.
+its title names: the Business Rules page, the Training Videos and User Manual list, the
+EOMS Docs list. The workspace's own name is different, because a workspace with that name
+would take the address over. Frappe checks the title against other names only outside a
+migrate.
 
 An entry has no module, or that module's forms would lead to it in their breadcrumbs. Its
 roles hide it from other users; Frappe still lists every entry for Workspace Managers.
 
 The sidebar can be reordered, so each entry is put back in its place after each migrate,
 and saved only when something changed. When the two entries it goes between share one
-place, the second is moved down to make room. None of this ever stops a migrate.
+place, the second is moved down to make room. An entry's place is worked out from the rest
+of the sidebar, not from this app's other entries, so an entry right below another neither
+pushes it along nor is pushed on each migrate. None of this ever stops a migrate.
 """
 
 import json
@@ -32,6 +35,17 @@ ENTRIES = (
 		after="Config Email",
 		before=None,
 		block="bizrules01",
+	),
+	frappe._dict(
+		name="Training Videos Sidebar",
+		title="Training Videos and User Manual",
+		link_type="DocType",
+		link_to="Training Videos and User Manual",
+		icon="education",
+		roles=(),  # every employee watches and reads them
+		after="Business Rules Sidebar",
+		before=None,
+		block="training01",
 	),
 	frappe._dict(
 		name="EOMS Docs Sidebar",
@@ -63,11 +77,18 @@ def put(spec):
 		entry = frappe.new_doc("Workspace")
 		entry.label = spec.name
 		entry.is_hidden = 0
-	others = frappe.get_all(
-		"Workspace",
-		filters={"public": 1, "name": ["!=", spec.name]},
-		fields=["name", "parent_page", "sequence_id"],
-	)
+	# Placed among the rest of the sidebar, not among this app's other entries, except the one it
+	# goes after: otherwise an entry placed after another pushes it along on every migrate.
+	ours = {other.name for other in ENTRIES} - {spec.after}
+	others = [
+		w
+		for w in frappe.get_all(
+			"Workspace",
+			filters={"public": 1, "name": ["!=", spec.name]},
+			fields=["name", "parent_page", "sequence_id"],
+		)
+		if w.name not in ours
+	]
 	parent, sequence, moves = place(others, spec.after, spec.before)
 	for name, moved_to in moves.items():
 		frappe.db.set_value("Workspace", name, "sequence_id", moved_to, update_modified=False)

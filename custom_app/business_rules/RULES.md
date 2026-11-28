@@ -24,7 +24,7 @@ Run the tests without a site, with Frappe, ERPNext and HRMS on the Python path:
 python -m unittest custom_app.tests.test_rules_policy custom_app.tests.test_rules_page \
     custom_app.tests.test_rules_purchase custom_app.tests.test_rules_budget \
     custom_app.tests.test_rules_people custom_app.tests.test_rules_access \
-    custom_app.tests.test_rules_eoms
+    custom_app.tests.test_rules_eoms custom_app.tests.test_rules_training
 ```
 
 Or on a bench, one module at a time, as for `test_budget_integration`:
@@ -257,6 +257,16 @@ bench --site <site> run-tests --skip-before-tests --module custom_app.tests.test
 | ED-06 | Pages load as the reader scrolls, a page when it comes near. Each is drawn as wide as the screen needs, rounded up to a few widths, and the browser keeps it for a day | `custom_app/doctype/eoms_docs/eoms_docs.js`, `custom_app/doctype/eoms_docs/eoms_docs.py::fit` | test_rules_eoms::test_pages_are_laid_out_before_they_are_drawn, test_rules_eoms::test_page_widths_are_rounded_up_to_a_few, test_rules_eoms::test_pages_load_only_when_scrolled_near |
 | ED-07 | A Word file is shown through a PDF that LibreOffice makes on save, kept as a private file of the record. Without LibreOffice, or when it fails, the save is refused. A PDF is shown as it is | `custom_app/doctype/eoms_docs/eoms_docs.py::make_preview`, `custom_app/doctype/eoms_docs/eoms_docs.py::to_pdf`, `custom_app/doctype/eoms_docs/eoms_docs.py::drop_preview` | test_rules_eoms::test_a_word_file_gets_a_pdf_to_show, test_rules_eoms::test_without_libreoffice_a_word_file_is_refused, test_rules_eoms::test_a_pdf_is_shown_as_it_is, test_rules_eoms::test_a_word_file_is_shown_from_its_pdf |
 | ED-08 | The EOMS Docs entry in the sidebar, between HR and Vendor & Assets, opens the list for everyone. When those two share a place, Vendor & Assets is moved down. It is put back after each migrate | `sidebar.py::add_entries`, `sidebar.py::place`, `sidebar.py::set_entry` | test_rules_eoms::test_eoms_docs_goes_between_hr_and_vendor_and_assets, test_rules_eoms::test_the_eoms_entry_opens_the_list_for_everyone, test_rules_eoms::test_an_eoms_entry_in_place_moves_nothing, test_rules_eoms::test_without_hr_the_eoms_entry_goes_last |
+
+## TR Training videos and user manuals
+
+| ID | Rule | Home | Test |
+| --- | --- | --- | --- |
+| TR-01 | Every Desk user reads Training Videos and User Manual. Only System Managers create, change or delete a topic, so only they see the New button | `custom_app/doctype/training_videos_and_user_manual/training_videos_and_user_manual.json` | test_rules_training::test_everyone_reads_and_only_system_managers_change |
+| TR-02 | Roles Applicable names the roles a topic is for, and the list can be filtered by it. It does not limit who reads the topic | `custom_app/doctype/training_videos_and_user_manual/training_videos_and_user_manual.json`, `custom_app/doctype/training_topic_role/training_topic_role.json` | test_rules_training::test_roles_applicable_does_not_limit_who_reads |
+| TR-03 | A topic has a title, a sidebar section, and a video, a user manual or both. The video is a private MP4 or WebM file and the manual a private PDF, each with content of that kind. The upload box offers only those | `custom_app/doctype/training_videos_and_user_manual/training_videos_and_user_manual.py::TrainingVideosandUserManual`, `custom_app/doctype/training_videos_and_user_manual/training_videos_and_user_manual.py::check_file`, `custom_app/doctype/training_videos_and_user_manual/training_videos_and_user_manual.js` | test_rules_training::test_a_topic_needs_a_video_or_a_manual, test_rules_training::test_only_mp4_or_webm_video_and_pdf_manual_are_accepted, test_rules_training::test_the_files_must_be_private, test_rules_training::test_a_renamed_file_is_refused |
+| TR-04 | The form plays the video and shows the manual on the page, each only when there is one. Frappe hands the files to whoever may read the topic and to nobody signed out, and a video can be skipped through. A video left playing is paused when the user moves away | `custom_app/doctype/training_videos_and_user_manual/training_videos_and_user_manual.js`, `overrides/file.py::may_download` | test_rules_training::test_the_form_plays_the_video_and_shows_the_manual, test_rules_training::test_readers_get_the_files_of_a_topic |
+| TR-05 | The Training Videos and User Manual entry in the sidebar, right below Business Rules, opens the list for everyone. It is put back after each migrate. Each entry of this app is placed among the rest of the sidebar, not among the others, so two in a row keep their places | `sidebar.py::add_entries`, `sidebar.py::put`, `sidebar.py::place` | test_rules_training::test_training_goes_right_below_business_rules, test_rules_training::test_the_training_entry_opens_the_list_for_everyone, test_rules_training::test_two_entries_in_a_row_stay_put, test_rules_training::test_without_business_rules_the_training_entry_goes_last |
 
 ## VN Vendors
 
