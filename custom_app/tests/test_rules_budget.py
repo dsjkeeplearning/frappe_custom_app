@@ -254,6 +254,19 @@ class TestReallocation(SiteTest):
 		for method in ("validate_single_account", "reallocate_budget", "cancel_and_amend_budget"):
 			self.assertFalse(hasattr(BudgetReallocation, method), method)
 
+	def test_the_budgeting_page_opens_a_new_reallocation_and_the_list(self):
+		pages = json.loads((DOCTYPES.parents[1] / "fixtures" / "workspace.json").read_text(encoding="utf-8"))
+		[page] = [w for w in pages if w["name"] == "Budgeting"]
+		shortcuts = {s["label"]: (s["type"], s["link_to"], s["doc_view"]) for s in page["shortcuts"]}
+		self.assertEqual(shortcuts["New Budget Reallocation"], ("DocType", "Budget Reallocation", "New"))
+		self.assertEqual(shortcuts["View Budget Reallocations"], ("DocType", "Budget Reallocation", "List"))
+		self.assertNotIn("Budget Reallocation", shortcuts)
+		# Shown side by side, the list right after the new one; every box shown is a shortcut.
+		shown = [b["data"]["shortcut_name"] for b in json.loads(page["content"]) if b["type"] == "shortcut"]
+		new = shown.index("New Budget Reallocation")
+		self.assertEqual(shown[new + 1], "View Budget Reallocations")
+		self.assertLessEqual(set(shown), set(shortcuts))
+
 
 class TestTransfer(SiteTest):
 	"""Budget moved from one month of an account to another in one step."""

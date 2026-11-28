@@ -325,6 +325,11 @@
    "plain": "Reallocations made before the three ways to move budget are marked as single account reallocations when the site is updated.",
    "source": "e6758186ec"
   },
+  "BR-25": {
+   "title": "Two shortcuts for reallocations",
+   "plain": "On the Budgeting page, New Budget Reallocation opens a new reallocation. View Budget Reallocations, right after it, opens the list of all reallocations.",
+   "source": "b6bef77f8d"
+  },
   "RP-01": {
    "title": "The report shows what a request can use",
    "plain": "The amount left in the Budget Availability report is exactly what a new request can use.",
