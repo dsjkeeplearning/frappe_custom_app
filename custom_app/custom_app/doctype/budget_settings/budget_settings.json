@@ -8,7 +8,9 @@
   "restrict_backdated_pr",
   "restrict_pr_to_current_month_budget",
   "use_transaction_date_for_pr_budget",
-  "pr_transaction_date_effective_from"
+  "pr_transaction_date_effective_from",
+  "budget_reallocation_section",
+  "allow_inter_department_transfer"
  ],
  "fields": [
   {
@@ -44,13 +46,25 @@
    "fieldtype": "Date",
    "label": "Transaction Date Check Effective From",
    "mandatory_depends_on": "eval:doc.use_transaction_date_for_pr_budget"
+  },
+  {
+   "fieldname": "budget_reallocation_section",
+   "fieldtype": "Section Break",
+   "label": "Budget Reallocation"
+  },
+  {
+   "default": "0",
+   "description": "If checked, a Budget Reallocation can be an Inter Department Transfer, which moves budget from one cost center to another and moves their Master Budget limits with it. Only a System Manager can change this.",
+   "fieldname": "allow_inter_department_transfer",
+   "fieldtype": "Check",
+   "label": "Allow Inter Department Transfer"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-14 13:00:00.000000",
+ "modified": "2026-11-28 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Custom App",
  "name": "Budget Settings",

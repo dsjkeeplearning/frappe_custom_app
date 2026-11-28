@@ -111,6 +111,13 @@ class TestWorkflows(unittest.TestCase):
 	def test_a_reallocation_cannot_be_cancelled(self):
 		self.assertEqual(steps("Budget Reallocation", action="Cancel"), [])
 
+	def test_an_earlier_form_reallocation_has_no_step_left(self):
+		self.assertEqual(self.allowed("Budget Reallocation", "Draft", reallocation_type="Single Account"), [])
+		for kind in ("Within Same Month", "Carry Forward", "Inter Department Transfer"):
+			self.assertEqual(
+				self.allowed("Budget Reallocation", "Draft", reallocation_type=kind), ["Approve", "Reject"], kind
+			)
+
 
 class TestLists(SiteTest):
 	def shown(self, query, *roles):

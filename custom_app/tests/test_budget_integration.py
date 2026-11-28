@@ -122,7 +122,7 @@ def make_distribution(cost_center, account, plan):
     )
 
 
-def make_budget(cost_center, account, plan):
+def make_budget(cost_center, account, plan, submit=True):
     distribution = make_distribution(cost_center, account, plan)
     budget = frappe.get_doc(
         {
@@ -145,7 +145,8 @@ def make_budget(cost_center, account, plan):
         }
     )
     budget.insert(ignore_permissions=True)
-    budget.submit()
+    if submit:
+        budget.submit()
     return budget
 
 
@@ -819,34 +820,48 @@ class TestExpenseClaims(ProcureToPayMixin, BudgetTestCase):
 
 
 class ReallocationMixin:
-    def make_reallocation(self, new_budget, month="October", account=ACCOUNT_A):
+    def make_transfer(
+        self,
+        amount,
+        kind="Within Same Month",
+        from_account=ACCOUNT_A,
+        to_account=ACCOUNT_B,
+        from_month="October",
+        to_month=None,
+        to_cost_center=None,
+    ):
+        """A draft Budget Reallocation moving `amount` out of TEST BI's account."""
         doc = frappe.get_doc(
             {
                 "doctype": "Budget Reallocation",
+                "reallocation_type": kind,
                 "company": COMPANY,
-                "cost_center": COST_CENTER,
                 "fiscal_year": FISCAL_YEAR,
-                "account": account,
-                "month": month,
-                "new_budget": new_budget,
+                "from_cost_center": COST_CENTER,
+                "from_account": from_account,
+                "from_month": from_month,
+                "to_cost_center": to_cost_center,
+                "to_account": to_account,
+                "to_month": to_month,
+                "amount": amount,
                 "reason": "Integration test",
             }
         )
         doc.insert(ignore_permissions=True)
         return doc
 
-    def active_budget(self, account=ACCOUNT_A):
+    def active_budget(self, account=ACCOUNT_A, cost_center=COST_CENTER):
         name = frappe.db.sql(
             """select b.name from `tabBudget` b join `tabBudget Account` ba on ba.parent = b.name
             where b.docstatus = 1 and b.cost_center = %s and ba.account = %s""",
-            (COST_CENTER, account),
+            (cost_center, account),
         )[0][0]
         return frappe.get_doc("Budget", name)
 
-    def set_master_budget_row(self, amount):
-        """Give TEST BI a row in the company's submitted Master Budget."""
+    def set_master_budget_row(self, amount, cost_center=COST_CENTER, department=DEPARTMENT):
+        """Give a TEST BI cost center a row in the company's submitted Master Budget."""
         name = frappe.db.get_value("Master Budget", {"company": COMPANY, "fiscal_year": FISCAL_YEAR, "docstatus": 1})
-        existing = frappe.db.get_value("Master Budget Department", {"parent": name, "cost_center": COST_CENTER})
+        existing = frappe.db.get_value("Master Budget Department", {"parent": name, "cost_center": cost_center})
         if existing:
             frappe.db.set_value("Master Budget Department", existing, "budget", amount)
             return name
@@ -856,8 +871,8 @@ class ReallocationMixin:
                 "parent": name,
                 "parenttype": "Master Budget",
                 "parentfield": "department_budget",
-                "department": DEPARTMENT,
-                "cost_center": COST_CENTER,
+                "department": department,
+                "cost_center": cost_center,
                 "budget": amount,
                 "idx": 999,
                 "docstatus": 1,
@@ -869,48 +884,56 @@ class ReallocationMixin:
 
 
 class TestBudgetReallocation(ReallocationMixin, ProcureToPayMixin, BudgetTestCase):
+    # Account A has 50,000 in October and Account B nothing.
+
     def test_f1_draft_changes_no_budget(self):
         before = self.active_budget()
 
-        draft = self.make_reallocation(80_000)
+        draft = self.make_transfer(30_000)
 
-        self.assertEqual(draft.current_budget, 50_000)
-        self.assertEqual(draft.new_total_annual_budget, 1_030_000)
+        self.assertEqual((draft.to_cost_center, draft.to_month), (COST_CENTER, "October"))
+        self.assertEqual((draft.from_month_budget, draft.from_new_month_budget), (50_000, 20_000))
+        self.assertEqual((draft.to_month_budget, draft.to_new_month_budget), (0, 30_000))
+        self.assertEqual((draft.from_new_year_budget, draft.to_new_year_budget), (970_000, 1_030_000))
         self.assertEqual(self.active_budget().name, before.name)
         self.assertEqual(self.report_row()["oct_budget"], 50_000)
 
-    def test_f2_approve_amends_budget_and_keeps_other_months(self):
-        old = self.active_budget()
+    def test_f2_approve_amends_both_budgets_and_keeps_other_months(self):
+        old_a, old_b = self.active_budget(), self.active_budget(ACCOUNT_B)
 
-        doc = apply_workflow(self.make_reallocation(80_000), "Approve")
+        doc = apply_workflow(self.make_transfer(30_000), "Approve")
         doc.reload()
 
-        new = self.active_budget()
-        self.assertEqual(frappe.db.get_value("Budget", old.name, "docstatus"), 2)
-        self.assertEqual(new.amended_from, old.name)
-        self.assertEqual(new.accounts[0].budget_amount, 1_030_000)
-        self.assertEqual((doc.old_budget_link, doc.new_budget_link), (old.name, new.name))
+        new_a, new_b = self.active_budget(), self.active_budget(ACCOUNT_B)
+        self.assertEqual(frappe.db.get_value("Budget", old_a.name, "docstatus"), 2)
+        self.assertEqual((new_a.amended_from, new_b.amended_from), (old_a.name, old_b.name))
+        self.assertEqual((new_a.accounts[0].budget_amount, new_b.accounts[0].budget_amount), (970_000, 1_030_000))
+        self.assertEqual(
+            (doc.from_old_budget, doc.from_new_budget, doc.to_old_budget, doc.to_new_budget),
+            (old_a.name, new_a.name, old_b.name, new_b.name),
+        )
 
-        row = self.report_row()
-        for month, amount in PLAN_A.items():
-            expected = 80_000 if month == "October" else amount
-            self.assertAlmostEqual(row[f"{month[:3].lower()}_budget"], expected, delta=0.01, msg=month)
+        for account, plan, october in ((ACCOUNT_A, PLAN_A, 20_000), (ACCOUNT_B, PLAN_B, 30_000)):
+            row = self.report_row(account)
+            for month, amount in plan.items():
+                expected = october if month == "October" else amount
+                self.assertAlmostEqual(row[f"{month[:3].lower()}_budget"], expected, delta=0.01, msg=month)
 
-    def test_f3_cannot_reduce_month_below_what_it_already_used(self):
+    def test_f3_cannot_move_more_than_the_month_has_left(self):
         self.raise_and_approve_pr(40_000)
 
-        self.assertBlocked(self.make_reallocation, 30_000, contains="Cannot reduce the October budget to ₹ 30,000.00")
-        self.assertEqual(self.make_reallocation(40_000).new_budget, 40_000)
+        self.assertBlocked(self.make_transfer, 10_001, contains="Only ₹ 10,000.00 is left to move from October")
+        self.assertEqual(self.make_transfer(10_000).left_to_move, 10_000)
 
     def test_f3_expense_claims_count_as_used(self):
         apply_workflow(self.make_expense_claim(45_000), "Approve")
 
-        self.assertBlocked(self.make_reallocation, 44_999, contains="₹ 45,000.00 is already used in October")
+        self.assertBlocked(self.make_transfer, 5_001, contains="₹ 45,000.00 of it is already used")
 
     def test_f3_journal_entries_count_as_used(self):
         self.make_journal_entry([(ACCOUNT_A, 45_000), ("Cash - CDE", -45_000)])
 
-        self.assertBlocked(self.make_reallocation, 44_999, contains="₹ 45,000.00 is already used in October")
+        self.assertBlocked(self.make_transfer, 5_001, contains="₹ 45,000.00 of it is already used")
 
     def test_f3_without_month_restriction_budget_to_date_is_checked(self):
         # Unused budget rolls forward, so October may use earlier months'
@@ -918,40 +941,77 @@ class TestBudgetReallocation(ReallocationMixin, ProcureToPayMixin, BudgetTestCas
         self.set_settings(restrict_pr_to_current_month_budget=0)
         self.raise_and_approve_pr(390_000)
 
-        self.assertBlocked(self.make_reallocation, 39_999, contains="would be ₹ 3,89,999.00")
-        self.assertEqual(self.make_reallocation(40_000).new_budget, 40_000)
+        self.assertBlocked(self.make_transfer, 10_001, contains="Unused budget rolls forward")
+        self.assertEqual(self.make_transfer(10_000).left_to_move, 10_000)
 
-    def test_f3_stopped_pr_does_not_block_a_reduction(self):
-        # Budget to the end of October is 4,00,000. A 3,90,000 PR, stopped
-        # with nothing ordered, uses nothing, so October can go down from
-        # 50,000 to 10,000. The current check counts the 3,90,000 and blocks.
+    def test_f3_stopped_pr_does_not_count_as_used(self):
+        # A 3,90,000 PR, stopped with nothing ordered, uses nothing, so all
+        # of October's 50,000 can still move.
         self.set_settings(restrict_pr_to_current_month_budget=0)
         pr = self.raise_and_approve_pr(390_000)
         pr.update_status("Stopped")
         self.set_settings(restrict_pr_to_current_month_budget=1)
 
-        doc = self.make_reallocation(10_000)
+        self.assertEqual(self.make_transfer(40_000).left_to_move, 50_000)
 
-        self.assertEqual(doc.new_total_annual_budget, 960_000)
+    def test_f4_carry_forward_moves_budget_between_months_of_one_account(self):
+        old = self.active_budget()
 
-    def test_f4_increase_needs_master_budget_headroom(self):
-        # TEST BI has 20,00,000 allocated across two accounts.
-        self.set_master_budget_row(2_000_000)
-        self.assertBlocked(self.make_reallocation, 80_000, contains="Budget Limit Exceeded")
+        doc = apply_workflow(self.make_transfer(20_000, kind="Carry Forward", to_month="December"), "Approve")
+        doc.reload()
 
-        self.set_master_budget_row(2_030_000)
-        self.assertEqual(self.make_reallocation(80_000).new_total_annual_budget, 1_030_000)
+        new = self.active_budget()
+        self.assertEqual((new.amended_from, new.accounts[0].budget_amount), (old.name, 1_000_000))
+        self.assertEqual((doc.to_account, doc.to_new_budget), (ACCOUNT_A, new.name))
+        self.assertEqual(self.active_budget(ACCOUNT_B).name, self.data.budgets[ACCOUNT_B].name)
+        row = self.report_row()
+        self.assertAlmostEqual(row["oct_budget"], 30_000, delta=0.01)
+        self.assertAlmostEqual(row["dec_budget"], 220_000, delta=0.01)
+        self.assertAlmostEqual(row["nov_budget"], 100_000, delta=0.01)
 
-    def test_f5_pr_check_and_report_use_new_month_amount_at_once(self):
-        apply_workflow(self.make_reallocation(80_000), "Approve")
+    def test_f4_inter_department_transfer_moves_the_master_budget_limits(self):
+        other_department = f"{PREFIX} Other - {ABBR}"
+        name = self.set_master_budget_row(2_000_000)
+        self.set_master_budget_row(1_000_000, OTHER_COST_CENTER, other_department)
+        # The test rows were added outside the total; make room so the Master Budget can be amended.
+        total = frappe.db.get_value("Master Budget", name, "total_budget")
+        frappe.db.set_value("Master Budget", name, "total_budget", total + 3_000_000)
 
-        self.assertEqual(self.report_row()["oct_left"], 80_000)
-        self.make_pr(80_000)
-        self.assertBlocked(self.make_pr, 80_001, contains="Insufficient budget for October 2026")
+        def transfer():
+            return self.make_transfer(
+                30_000,
+                kind="Inter Department Transfer",
+                to_cost_center=OTHER_COST_CENTER,
+                to_account=ACCOUNT_A,
+                to_month="January",
+            )
+
+        self.set_settings(allow_inter_department_transfer=0)
+        self.assertBlocked(transfer, contains="Inter Department Transfer is turned off")
+        self.set_settings(allow_inter_department_transfer=1)
+
+        doc = apply_workflow(transfer(), "Approve")
+        doc.reload()
+
+        new_master = frappe.get_doc("Master Budget", doc.new_master_budget)
+        limits = {row.cost_center: row.budget for row in new_master.department_budget}
+        self.assertEqual((limits[COST_CENTER], limits[OTHER_COST_CENTER]), (1_970_000, 1_030_000))
+        self.assertEqual((new_master.docstatus, new_master.workflow_state), (1, "Approved"))
+        self.assertEqual(frappe.db.get_value("Master Budget", name, ["docstatus", "workflow_state"]), (2, "Cancelled"))
+        self.assertEqual(self.active_budget().accounts[0].budget_amount, 970_000)
+        self.assertEqual(self.active_budget(cost_center=OTHER_COST_CENTER).accounts[0].budget_amount, 1_030_000)
+        self.assertAlmostEqual(self.report_row(cost_center=OTHER_COST_CENTER)["jan_budget"], 130_000, delta=0.01)
+
+    def test_f5_pr_check_and_report_use_new_amounts_at_once(self):
+        apply_workflow(self.make_transfer(30_000), "Approve")
+
+        self.assertEqual(self.report_row(ACCOUNT_B)["oct_left"], 30_000)
+        self.make_pr(30_000, item=ITEM_B)
+        self.assertBlocked(self.make_pr, 30_001, item=ITEM_B, contains="Insufficient budget for October 2026")
 
     def test_f6_named_approver_is_recorded(self):
         user = self.make_user("tbi-finance-approver@example.com", ["Finance Approver"])
-        doc = self.make_reallocation(80_000)
+        doc = self.make_transfer(30_000)
 
         frappe.set_user(user)
         apply_workflow(frappe.get_doc("Budget Reallocation", doc.name), "Approve")
@@ -1047,7 +1107,9 @@ class TestMasterBudget(ReallocationMixin, BudgetTestCase):
 
     def test_g2_amended_master_budget_with_higher_total_applies(self):
         name = self.set_master_budget_row(2_000_000)
-        self.assertBlocked(self.make_reallocation, 80_000, contains="Budget Limit Exceeded")
+        account = self.make_account("TBI-C Test Extra")
+        draft = make_budget(COST_CENTER, account, march_only(30_000), submit=False)
+        self.assertBlocked(draft.submit, contains="Master Budget limit exceeded")
 
         master = frappe.get_doc("Master Budget", name)
         master = apply_workflow(master, "Cancel")
@@ -1064,7 +1126,9 @@ class TestMasterBudget(ReallocationMixin, BudgetTestCase):
         amended = apply_workflow(amended, "Approve")
 
         self.assertEqual(amended.docstatus, 1)
-        self.assertEqual(self.make_reallocation(80_000).master_budget_limit, 2_030_000)
+        budget = frappe.get_doc("Budget", draft.name)
+        budget.submit()
+        self.assertEqual(budget.docstatus, 1)
 
 
 # ---------------------------------------------------------------------------
@@ -1768,7 +1832,7 @@ class TestPermissions(ProcureToPayMixin, BudgetTestCase):
 
     def test_l8_finance_user_cannot_approve_reallocation(self):
         finance_user = self.make_user("tbi-finance-user@example.com", ["Finance User"])
-        doc = ReallocationMixin.make_reallocation(self, 60_000)
+        doc = ReallocationMixin.make_transfer(self, 10_000)
 
         frappe.set_user(finance_user)
         with self.assertRaisesRegex(frappe.ValidationError, "Not a valid Workflow Action"):
